@@ -1,0 +1,7 @@
+project_id = "accchfpbavgsvnwizzbo"
+
+[functions.import-spotify-data]
+verify_jwt = false
+
+[functions.jiosaavn-api]
+verify_jwt = false

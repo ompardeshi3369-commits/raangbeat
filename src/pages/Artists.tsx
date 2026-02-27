@@ -9,59 +9,150 @@ import { followsApi } from "@/lib/mongodb";
 import { Loader2, Users, Heart, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Popular Hindi artists to feature — split into pages of 15
+// Popular artists across all genres — loaded in pages of 15
 const ALL_POPULAR_ARTISTS = [
-  // Page 1 (initial load)
+  // ── Bollywood Male Singers ──────────────────────────────
   "Arijit Singh",
+  "Atif Aslam",
+  "Jubin Nautiyal",
+  "Darshan Raval",
+  "Armaan Malik",
+  "Sonu Nigam",
+  "KK",
+  "Mohit Chauhan",
+  "Shaan",
+  "Javed Ali",
+  "Vishal Mishra",
+  "Stebin Ben",
+  "Yasser Desai",
+  "Ash King",
+  "Benny Dayal",
+
+  // ── Bollywood Female Singers ─────────────────────────────
   "Shreya Ghoshal",
   "Neha Kakkar",
-  "Atif Aslam",
-  "Badshah",
-  "Darshan Raval",
-  "Jubin Nautiyal",
-  "Armaan Malik",
-  "Honey Singh",
-  "Sachet Tandon",
-  "Kumar Sanu",
-  "Udit Narayan",
-  "Sonu Nigam",
-  "Alka Yagnik",
-  "KK",
-  // Page 2
-  "Lata Mangeshkar",
-  "Kishore Kumar",
-  "A.R. Rahman",
-  "Asha Bhosle",
-  "Pritam",
-  "Vishal-Shekhar",
-  "Rahat Fateh Ali Khan",
-  "Sachet-Parampara",
-  "B Praak",
   "Tulsi Kumar",
   "Sunidhi Chauhan",
-  "Mohit Chauhan",
-  "Amit Trivedi",
-  "Guru Randhawa",
-  "Shankar Mahadevan",
-  // Page 3
-  "Diljit Dosanjh",
-  "Anuv Jain",
-  "Papon",
-  "Shaan",
-  "Mika Singh",
-  "Sukhwinder Singh",
-  "Javed Ali",
+  "Alka Yagnik",
+  "Lata Mangeshkar",
+  "Asha Bhosle",
+  "Kavita Krishnamurthy",
+  "Asees Kaur",
+  "Dhvani Bhanushali",
   "Palak Muchhal",
-  "Vishal Mishra",
+  "Jonita Gandhi",
+  "Shilpa Rao",
+  "Rekha Bhardwaj",
+  "Monali Thakur",
+
+  // ── Retro Legends ────────────────────────────────────────
+  "Kishore Kumar",
+  "Mohammed Rafi",
+  "Kumar Sanu",
+  "Udit Narayan",
+  "Manna Dey",
+  "Mukesh",
+  "Hemant Kumar",
+  "S.P. Balasubrahmanyam",
+  "Laxmikant Pyarelal",
+
+  // ── Music Composers / Duo ─────────────────────────────────
+  "A.R. Rahman",
+  "Pritam",
+  "Amit Trivedi",
+  "Vishal-Shekhar",
+  "Shankar Mahadevan",
+  "Shankar Ehsaan Loy",
+  "Sachet-Parampara",
+  "Sachet Tandon",
+  "Tanishk Bagchi",
+  "Meet Bros",
+
+  // ── Punjabi / Hip-Hop ────────────────────────────────────
+  "Diljit Dosanjh",
+  "Guru Randhawa",
   "AP Dhillon",
+  "Harrdy Sandhu",
+  "Karan Aujla",
+  "Badshah",
+  "Honey Singh",
   "Raftaar",
   "Divine",
   "King",
   "MC Stan",
-  "Harrdy Sandhu",
+  "Jazzy B",
+  "Ammy Virk",
+  "Jordan Sandhu",
+  "Satinder Sartaaj",
+  "Sidhu Moosewala",
+  "Prabh Deep",
+  "Bohemia",
+
+  // ── Indie / New Age ──────────────────────────────────────
+  "Prateek Kuhad",
+  "Anuv Jain",
+  "Ritviz",
+  "Papon",
+  "Nucleya",
+  "Dhruv Visvanath",
+  "Aastha Gill",
+  "Sukriti Kakar",
+  "Prakriti Kakar",
+  "Mame Khan",
+  "Shaan",
+  "Clinton Cerejo",
+
+  // ── Tamil / South Indian ─────────────────────────────────
+  "Anirudh Ravichander",
+  "Sid Sriram",
+  "Yuvan Shankar Raja",
+  "Deva",
+  "Vijay Antony",
+  "Haricharan",
+  "Shreya Ghoshal",
+
+  // ── Telugu ───────────────────────────────────────────────
+  "SS Thaman",
+  "Sunitha Upadrashta",
+  "Karthik",
+
+  // ── Marathi / Regional ───────────────────────────────────
+  "Ajay-Atul",
+  "Sonu Kakkar",
+  "Vaishali Made",
+  "Swapnil Bandodkar",
+
+  // ── Classical / Ghazal / Devotional ─────────────────────
+  "Jagjit Singh",
+  "Mehdi Hassan",
+  "Ghulam Ali",
+  "Rahat Fateh Ali Khan",
+  "Hari Om Sharan",
+  "Anup Jalota",
+  "Pandit Jasraj",
+  "Kumar Gandharva",
+  "Abida Parveen",
+
+  // ── International (available on JioSaavn) ────────────────
+  "Ed Sheeran",
+  "Justin Bieber",
+  "Taylor Swift",
+  "Coldplay",
+  "The Weeknd",
+  "Billie Eilish",
+  "Post Malone",
+  "Camila Cabello",
+  "Eminem",
+  "BTS",
+  "Ariana Grande",
+  "Bruno Mars",
+  "Drake",
+  "Dua Lipa",
+  "Harry Styles",
 ];
 
 const PAGE_SIZE = 15;
+
 
 // Format follower count to human-readable (e.g. 42960629 → "42.9M")
 const formatFollowers = (count: string | number | undefined): string => {

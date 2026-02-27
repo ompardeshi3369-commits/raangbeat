@@ -429,8 +429,8 @@ export default function Library() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as "favorites" | "recent" | "playlists")}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all ${activeTab === tab.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
                   }`}
               >
                 <tab.icon className="w-4 h-4" />

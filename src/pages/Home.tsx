@@ -99,6 +99,10 @@ export default function Home() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [apiTracks, setApiTracks] = useState<Track[]>(cachedApiTracks || []);
   const [isLoading, setIsLoading] = useState(!cachedApiTracks);
+  const [allTracksPage, setAllTracksPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const TRACKS_PER_PAGE = 20;
 
   // Load songs from JioSaavn API
   useEffect(() => {
@@ -184,6 +188,38 @@ export default function Home() {
       loadApiSongs();
     }
   }, [user, setQueue]);
+
+  // Load more tracks from next API page (same pattern as Discover page)
+  const loadMoreTracks = async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    try {
+      const nextPage = allTracksPage + 1;
+      const [trendingRes, newReleasesRes] = await Promise.all([
+        jiosaavnApi.getTrending(nextPage, 20),
+        jiosaavnApi.getNewReleases(nextPage, 20),
+      ]);
+      const newSongs = [
+        ...(trendingRes?.songs || []),
+        ...(newReleasesRes?.songs || []),
+      ].filter(s => s.hasLyrics);
+
+      if (newSongs.length === 0) {
+        setHasMore(false);
+      } else {
+        const newTracks = newSongs.map(s => jiosaavnToTrack(s as JioSaavnTrack, detectMood(s.title, s.artist)));
+        setApiTracks(prev => {
+          const existingIds = new Set(prev.map(t => t.id));
+          return [...prev, ...newTracks.filter(t => !existingIds.has(t.id))];
+        });
+        setAllTracksPage(nextPage);
+      }
+    } catch (err) {
+      console.error("Error loading more tracks:", err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Show welcome animation on every login - uses a one-time session flag
   // that gets cleared when the page is closed/refreshed before login
@@ -364,6 +400,30 @@ export default function Home() {
               {apiTracks.slice(15).map((track, index) => ( // Skip first 15 which are in trending
                 <TrackCard key={track.id} track={track} index={index} />
               ))}
+            </div>
+            {/* Load More button — same pattern as Discover page */}
+            <div className="flex justify-center mt-8 mb-2">
+              {hasMore ? (
+                <button
+                  onClick={loadMoreTracks}
+                  disabled={isLoadingMore}
+                  className="flex items-center gap-2 px-8 py-3 rounded-xl bg-card border border-border/50 hover:border-primary/40 hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-sm group"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Flame className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                      Load More Songs
+                    </>
+                  )}
+                </button>
+              ) : (
+                <p className="text-sm text-muted-foreground">All songs loaded ✓</p>
+              )}
             </div>
           </section>
         </main>

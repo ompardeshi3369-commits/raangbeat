@@ -24,7 +24,7 @@ const defaultAboutSettings: AboutUsSettings = {
   businessEmail: "business@rangebeat.com",
   phone: "+1 (234) 567-890",
   instagram: "https://instagram.com/",
-  instagram2: "https://instagram.com/",
+  instagram2: "https://www.instagram.com/sumit_pawaskar_21?igsh=MXgyOXg1dWJlcGZleA==",
 };
 
 export default function Admin() {

@@ -49,19 +49,19 @@ export function AudioVisualizer({
     const animate = (timestamp: number) => {
       setHeights(prev => prev.map((prevHeight, i) => {
         const position = i / barCount;
-        
+
         // Smooth flowing waves
         const wave1 = Math.sin(timestamp * 0.002 - position * Math.PI * 2.5) * 22;
         const wave2 = Math.sin(timestamp * 0.0015 - position * Math.PI * 1.8) * 16;
-        
+
         const targetHeight = 52 + wave1 + wave2;
-        
+
         // Balanced interpolation - not too slow, not too fast
         const smoothed = prevHeight + (targetHeight - prevHeight) * 0.08;
-        
+
         return Math.min(92, Math.max(18, smoothed));
       }));
-      
+
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -80,7 +80,7 @@ export function AudioVisualizer({
         {heights.map((height, i) => {
           const progress = i / barCount;
           const hue = 330 - progress * 100;
-          
+
           return (
             <div
               key={i}
@@ -91,8 +91,8 @@ export function AudioVisualizer({
                 maxWidth: '10px',
                 height: `${height}%`,
                 background: `hsla(${hue}, 85%, 60%, 0.95)`,
-                boxShadow: isPlaying 
-                  ? `0 0 10px hsla(${hue}, 90%, 55%, 0.6)` 
+                boxShadow: isPlaying
+                  ? `0 0 10px hsla(${hue}, 90%, 55%, 0.6)`
                   : 'none',
               }}
             />
@@ -119,10 +119,10 @@ export function AudioVisualizer({
               <stop offset="100%" stopColor="hsl(240, 100%, 60%)" />
             </linearGradient>
             <filter id="glow">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feGaussianBlur stdDeviation="2" result="coloredBlur" />
               <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
           </defs>

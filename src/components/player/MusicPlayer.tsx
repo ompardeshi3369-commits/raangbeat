@@ -57,11 +57,11 @@ export function MusicPlayer() {
   const [isRefreshingLyrics, setIsRefreshingLyrics] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
-  
+
   // Equalizer state
   const [eqBands, setEqBands] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0]);
   const [bassBoost, setBassBoost] = useState(0);
-  
+
   // Reactions state
   const [activeReaction, setActiveReaction] = useState<string | null>(null);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -87,7 +87,7 @@ export function MusicPlayer() {
       setIsRefreshingLyrics(false);
       return;
     }
-    
+
     // Fallback to local Supabase songs
     const { data } = await supabase
       .from("songs")
@@ -148,27 +148,27 @@ export function MusicPlayer() {
             currentTrack.mood === "party" && "bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500",
           )}>
             {isPlaying && (
-              <div 
+              <div
                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
                 style={{ animation: 'shimmer 2s ease-in-out infinite' }}
               />
             )}
           </div>
         )}
-        
+
         {/* Main Player Content */}
         <div className="max-w-7xl mx-auto px-4 py-3 relative">
           <div className="flex items-center gap-4">
             {/* Track Info */}
             <div className="flex items-center gap-3 min-w-0 w-48 sm:w-56 flex-shrink-0">
               <div className="relative group flex-shrink-0">
-                <img 
-                  src={currentTrack.coverUrl} 
-                  alt={currentTrack.title} 
+                <img
+                  src={currentTrack.coverUrl}
+                  alt={currentTrack.title}
                   className={cn(
                     "w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover transition-all duration-300",
                     isPlaying && "ring-2 ring-primary/50 shadow-lg shadow-primary/20"
-                  )} 
+                  )}
                 />
                 {isPlaying && (
                   <div className="absolute -inset-1 rounded-xl bg-primary/20 blur-md -z-10 animate-pulse" />
@@ -203,13 +203,13 @@ export function MusicPlayer() {
 
             {/* Controls - Enhanced */}
             <div className="flex items-center gap-2">
-              <button 
-                onClick={previousTrack} 
+              <button
+                onClick={previousTrack}
                 className="p-2.5 rounded-full bg-muted/30 hover:bg-muted/50 transition-all hover:scale-110 active:scale-95 border border-border/30"
               >
                 <SkipBack className="w-5 h-5" />
               </button>
-              
+
               <button
                 onClick={togglePlay}
                 className={cn(
@@ -231,9 +231,9 @@ export function MusicPlayer() {
                   <Play className="w-6 h-6 text-white ml-0.5 relative z-10" />
                 )}
               </button>
-              
-              <button 
-                onClick={nextTrack} 
+
+              <button
+                onClick={nextTrack}
                 className="p-2.5 rounded-full bg-muted/30 hover:bg-muted/50 transition-all hover:scale-110 active:scale-95 border border-border/30"
               >
                 <SkipForward className="w-5 h-5" />
@@ -243,7 +243,7 @@ export function MusicPlayer() {
             {/* Quick Actions */}
             <div className="flex items-center gap-1">
               {user && currentTrack && (
-                <button 
+                <button
                   onClick={() => toggleFavorite(currentTrack.id, currentTrack)}
                   className={cn(
                     "p-2 rounded-full hover:bg-muted/50 transition-all hover:scale-110",
@@ -257,20 +257,20 @@ export function MusicPlayer() {
                 </button>
               )}
 
-              <button 
-                onClick={toggleShuffle} 
+              <button
+                onClick={toggleShuffle}
                 className={cn(
-                  "p-2 rounded-full hover:bg-muted/50 transition-all hover:scale-110 hidden md:flex", 
+                  "p-2 rounded-full hover:bg-muted/50 transition-all hover:scale-110 hidden md:flex",
                   isShuffled && "text-primary bg-primary/10"
                 )}
               >
                 <Shuffle className="w-5 h-5" />
               </button>
 
-              <button 
-                onClick={toggleRepeat} 
+              <button
+                onClick={toggleRepeat}
                 className={cn(
-                  "p-2 rounded-full hover:bg-muted/50 transition-all hover:scale-110 hidden md:flex", 
+                  "p-2 rounded-full hover:bg-muted/50 transition-all hover:scale-110 hidden md:flex",
                   repeatMode !== "none" && "text-primary bg-primary/10"
                 )}
               >
@@ -284,8 +284,8 @@ export function MusicPlayer() {
 
               {/* Volume */}
               <div className="hidden md:flex items-center gap-2 bg-muted/30 rounded-full px-3 py-2">
-                <button 
-                  onClick={() => setVolume(volume === 0 ? 0.7 : 0)} 
+                <button
+                  onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
                   className="p-1 hover:bg-muted/50 rounded-full transition-colors"
                 >
                   {volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
@@ -300,7 +300,7 @@ export function MusicPlayer() {
               {/* Fullscreen Button */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button 
+                  <button
                     onClick={() => setShowFullscreen(true)}
                     className="p-2 rounded-full hover:bg-muted/50 transition-all hover:scale-110"
                   >
@@ -311,7 +311,7 @@ export function MusicPlayer() {
               </Tooltip>
 
               {/* Expand Button */}
-              <button 
+              <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
                   "p-2 rounded-full hover:bg-muted/50 transition-all hover:scale-110",
@@ -331,7 +331,7 @@ export function MusicPlayer() {
                 <div className="relative">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button 
+                      <button
                         onClick={() => setShowReactionPicker(!showReactionPicker)}
                         className={cn(
                           "p-2 rounded-xl hover:bg-muted/50 transition-all border border-border/50",
@@ -347,7 +347,7 @@ export function MusicPlayer() {
                     </TooltipTrigger>
                     <TooltipContent>React</TooltipContent>
                   </Tooltip>
-                  
+
                   {showReactionPicker && (
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 rounded-xl bg-card/95 backdrop-blur-xl border border-border/50 flex gap-1 animate-scale-in">
                       {["🔥", "❤️", "🎵", "💯", "✨", "🎶"].map((emoji) => (
@@ -368,8 +368,8 @@ export function MusicPlayer() {
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button 
-                      onClick={() => setShowEqualizer(true)} 
+                    <button
+                      onClick={() => setShowEqualizer(true)}
                       className={cn("p-2 rounded-xl hover:bg-muted/50 transition-colors border border-border/50", hasEqActive && "text-primary border-primary/50")}
                     >
                       <SlidersHorizontal className="w-4 h-4" />
@@ -380,8 +380,8 @@ export function MusicPlayer() {
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button 
-                      onClick={() => setShowLyrics(true)} 
+                    <button
+                      onClick={() => setShowLyrics(true)}
                       className={cn("p-2 rounded-xl hover:bg-muted/50 transition-colors border border-border/50", currentLyrics && "text-primary border-primary/50")}
                     >
                       <Music2 className="w-4 h-4" />
@@ -389,11 +389,11 @@ export function MusicPlayer() {
                   </TooltipTrigger>
                   <TooltipContent>Lyrics</TooltipContent>
                 </Tooltip>
-                
+
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button 
-                      onClick={() => setShowQueue(true)} 
+                    <button
+                      onClick={() => setShowQueue(true)}
                       className="p-2 rounded-xl hover:bg-muted/50 transition-colors border border-border/50"
                     >
                       <ListMusic className="w-4 h-4" />
@@ -401,11 +401,11 @@ export function MusicPlayer() {
                   </TooltipTrigger>
                   <TooltipContent>Queue</TooltipContent>
                 </Tooltip>
-                
+
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button 
-                      onClick={() => setShowSleepTimer(true)} 
+                    <button
+                      onClick={() => setShowSleepTimer(true)}
                       className={cn("p-2 rounded-xl hover:bg-muted/50 transition-colors border border-border/50", sleepTimer && "text-primary border-primary/50")}
                     >
                       <Moon className="w-4 h-4" />
@@ -458,9 +458,9 @@ export function MusicPlayer() {
         bassBoost={bassBoost}
         onBassBoostChange={setBassBoost}
       />
-      <FullscreenPlayer 
-        isOpen={showFullscreen} 
-        onClose={() => setShowFullscreen(false)} 
+      <FullscreenPlayer
+        isOpen={showFullscreen}
+        onClose={() => setShowFullscreen(false)}
       />
     </>
   );

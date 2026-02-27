@@ -147,15 +147,15 @@ export default function Library() {
   const { history, isLoading: historyLoading } = useMongoRecentlyPlayed();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // Read tab from URL, default to "favorites"
   const tabParam = searchParams.get("tab");
   const activeTab = (tabParam === "recent" || tabParam === "playlists") ? tabParam : "favorites";
-  
+
   const setActiveTab = (tab: "favorites" | "recent" | "playlists") => {
     setSearchParams({ tab });
   };
-  
+
   const [recentlyPlayedTracks, setRecentlyPlayedTracks] = useState<Track[]>([]);
   const [favoriteTracks, setFavoriteTracks] = useState<Track[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState(true);
@@ -174,7 +174,7 @@ export default function Library() {
       try {
         const songIds = Array.from(favorites);
         const tracks: Track[] = [];
-        
+
         for (const songId of songIds) {
           // Check if it's an external song with stored metadata
           if (songId.startsWith("jiosaavn_")) {
@@ -204,7 +204,7 @@ export default function Library() {
             }
           }
         }
-        
+
         setFavoriteTracks(tracks);
       } catch (error) {
         console.error("Error loading favorite tracks:", error);
@@ -227,11 +227,11 @@ export default function Library() {
       try {
         const tracks: Track[] = [];
         const seenIds = new Set<string>();
-        
+
         for (const item of history) {
           if (seenIds.has(item.songId)) continue;
           seenIds.add(item.songId);
-          
+
           // Check if it's an external song with stored metadata
           if (item.songId.startsWith("jiosaavn_")) {
             // First check if we have metadata in the recently played item
@@ -262,7 +262,7 @@ export default function Library() {
             }
             continue;
           }
-          
+
           // Skip jiosaavn songs without metadata
           if (item.songId.startsWith("jiosaavn_")) continue;
           try {
@@ -274,7 +274,7 @@ export default function Library() {
             console.error(`Error fetching song ${item.songId}:`, err);
           }
         }
-        
+
         setRecentlyPlayedTracks(tracks);
       } catch (error) {
         console.error("Error loading recent tracks:", error);
@@ -372,10 +372,10 @@ export default function Library() {
             continue;
           }
         }
-        
+
         // Skip non-MongoDB IDs that failed metadata lookup
         if (songId.startsWith("jiosaavn_")) continue;
-        
+
         // Local song - fetch from MongoDB
         try {
           const { song } = await songsApi.getById(songId);
@@ -428,11 +428,10 @@ export default function Library() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as "favorites" | "recent" | "playlists")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all ${
-                  activeTab === tab.id
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all ${activeTab === tab.id
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                }`}
+                  }`}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
@@ -484,7 +483,7 @@ export default function Library() {
                     <Plus className="w-4 h-4 mr-2" />
                     Create Playlist
                   </NeonButton>
-                  
+
                   {/* Playlist List */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                     {playlists.length === 0 ? (
@@ -493,9 +492,9 @@ export default function Library() {
                       </p>
                     ) : (
                       playlists.map((playlist) => (
-                        <GlassCard 
-                          key={playlist._id} 
-                          className={`p-4 flex items-center gap-4 ${selectedPlaylist === playlist._id ? "border-primary/50 bg-primary/10" : ""}`} 
+                        <GlassCard
+                          key={playlist._id}
+                          className={`p-4 flex items-center gap-4 ${selectedPlaylist === playlist._id ? "border-primary/50 bg-primary/10" : ""}`}
                           hover
                           onClick={() => handleSelectPlaylist(playlist._id)}
                         >
@@ -537,7 +536,7 @@ export default function Library() {
                           </NeonButton>
                         )}
                       </div>
-                      
+
                       {isLoadingPlaylistTracks ? (
                         <div className="flex items-center justify-center py-8">
                           <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -549,9 +548,9 @@ export default function Library() {
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                           {playlistTracks.map((track) => (
-                            <PlaylistTrackRow 
-                              key={track.id} 
-                              track={track} 
+                            <PlaylistTrackRow
+                              key={track.id}
+                              track={track}
                               onRemove={() => handleRemoveFromPlaylist(track.id)}
                             />
                           ))}

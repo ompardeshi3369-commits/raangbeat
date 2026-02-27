@@ -26,7 +26,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <MoodBackground mood={currentMood} isPlaying={isPlaying} />
       <AppSidebar onCollapsedChange={setSidebarCollapsed} />
       <FloatingProfileButton showSignOut={sidebarCollapsed} />
-      <main 
+      <main
         className={cn(
           "flex-1 transition-all duration-300 relative z-10",
           sidebarCollapsed ? "ml-16" : "ml-64"

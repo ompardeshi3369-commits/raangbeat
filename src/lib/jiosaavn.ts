@@ -581,33 +581,31 @@ export const jiosaavnApi = {
       };
     }
 
-    // 3. Try JioSaavn native lyrics (Secondary)
+    // 3. LewdHuTao — Musixmatch (best coverage for Bollywood/Hindi)
     try {
-      const cleanId = songId.replace("jiosaavn_", "");
-      const data = await fetchApi<any>(`/api/songs/${cleanId}/lyrics`);
-      if (data.success && data.data?.lyrics) {
-        return { lyrics: data.data.lyrics, copyright: data.data.copyright || "" };
-      }
-    } catch {
-      // fallback
-    }
-
-    // 3. Final Fallback: lyrics.ovh with multi-artist fallback
-    for (const singer of artistList) {
-      try {
-        const res = await fetch(
-          `https://api.lyrics.ovh/v1/${encodeURIComponent(singer)}/${encodeURIComponent(cleanTitle)}`
-        );
-        if (res.ok) {
-          const lyricsData = await res.json();
-          if (lyricsData.lyrics) {
-            return { lyrics: lyricsData.lyrics, copyright: "Lyrics provided by lyrics.ovh" };
-          }
+      const res = await fetch(
+        `https://lyrics.lewdhutao.my.eu.org/v2/musixmatch/lyrics?title=${encodeURIComponent(cleanTitle)}&artist=${encodeURIComponent(artistList[0])}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.data?.lyrics) {
+          return { lyrics: data.data.lyrics, copyright: "Lyrics by Musixmatch" };
         }
-      } catch {
-        // failed
       }
-    }
+    } catch { /* continue */ }
+
+    // 4. LewdHuTao — YouTube Music lyrics
+    try {
+      const res = await fetch(
+        `https://lyrics.lewdhutao.my.eu.org/v2/youtube/lyrics?title=${encodeURIComponent(cleanTitle)}&artist=${encodeURIComponent(artistList[0])}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.data?.lyrics) {
+          return { lyrics: data.data.lyrics, copyright: "Lyrics via YouTube Music" };
+        }
+      }
+    } catch { /* continue */ }
 
     return { lyrics: "", copyright: "" };
   },

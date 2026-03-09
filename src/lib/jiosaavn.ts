@@ -333,7 +333,7 @@ export const jiosaavnApi = {
 
 
   getFeaturedAlbums: async () => {
-    // Extended list of queries for variety
+    // Original album list — exactly as shown in the user's screenshots
     const featuredQueries = [
       // --- Devotional ---
       { name: "Devotional Hits", query: "best bhakti songs hindi" },
@@ -348,16 +348,15 @@ export const jiosaavnApi = {
       { name: "Telugu Chartbusters", query: "telugu top hits" },
 
       // --- Trending & Bollywood ---
-      { name: "Hot Hits Hindi", query: "hot hits hindi" },
+      { name: "Hot Hits Hindi", query: "bollywood hot hits 2024" },
       { name: "Trending Now Hindi", query: "trending now hindi" },
       { name: "Bollywood Mush", query: "best bollywood mush songs" },
       { name: "Trending Valentine's", query: "romantic hindi songs" },
       { name: "Bollywood Dance Music", query: "bollywood dance music" },
-      { name: "Party Anthems", query: "bollywood party hits" },
 
       // --- Decades & Eras ---
-      { name: "Old is Gold", query: "mohammad rafi kishore kumar hits" }, // Better cover likelihood
-      { name: "90s Evergreen Hits", query: "kumar sanu alka yagnik hits" }, // Iconic 90s
+
+      { name: "90s Evergreen Hits", query: "kumar sanu alka yagnik hits" },
       { name: "All Out Hindi 00s", query: "best of 2000s hindi" },
       { name: "All Out Hindi 10s", query: "all out hindi 2010s" },
       { name: "Retro Romance", query: "old romantic hindi songs" },
@@ -368,7 +367,7 @@ export const jiosaavnApi = {
       { name: "Lofi Hindi", query: "lofi flip hindi" },
       { name: "PHONK Hindi", query: "phonk hindi" },
 
-      // --- Artist Spotlights (Replacements) ---
+      // --- Artist Spotlights ---
       { name: "Arijit Singh Favorites", query: "arijit singh best songs" },
       { name: "Atif Aslam Hits", query: "atif aslam hits" },
       { name: "Yo Yo Honey Singh", query: "yo yo honey singh hits" },
@@ -377,41 +376,189 @@ export const jiosaavnApi = {
       { name: "Long Drive", query: "long drive hindi songs" },
       { name: "Morning Vibes", query: "morning peaceful hindi songs" },
       { name: "Gym Workout", query: "hindi workout motivational" },
-      { name: "Sleep & Relax", query: "sleep hindi songs instrumental" },
 
       // --- Others ---
-      { name: "Happy Vibes", query: "feel good hindi songs" }, // "Feel good" usually has better covers
+      { name: "Happy Vibes", query: "feel good hindi songs" },
       { name: "#GRWM Hindi", query: "grwm hindi hits" },
       { name: "Filmy Hangover", query: "filmy hangover hindi" },
-      { name: "Mega Hits Collection", query: "mega hits bollywood" }
-    ];
+      { name: "Mega Hits Collection", query: "mega hits bollywood" },
 
-    // Use fixed order for consistency - exactly as user requested
-    // No shuffling, no random pages, no limits.
-    const fixedQueries = featuredQueries;
+      // --- High-Density Artist & Viral Hits ---
+      { name: "Bollywood Top 50", query: "bollywood top 50" },
+      { name: "Viral Hits Hindi", query: "viral hits hindi" },
+      { name: "Neha Kakkar Superhits", query: "neha kakkar hits" },
+      { name: "Shreya Ghoshal Melodies", query: "shreya ghoshal top songs" },
+      { name: "Badshah Party Anthems", query: "badshah hits" },
+      { name: "Darshan Raval Specials", query: "darshan raval hits" },
+      { name: "Jubin Nautiyal Hits", query: "jubin nautiyal best songs" },
+      { name: "Best of Sonu Nigam", query: "sonu nigam hits" },
+      { name: "Top JioTunes Hindi", query: "top jiotunes hindi" },
+      { name: "Unplugged Masterpieces", query: "mtv unplugged hindi" },
+
+      // --- Legendary Artists & Modern Hits ---
+      { name: "Kishore Kumar Classics", query: "best of kishore kumar" },
+      { name: "Lata Mangeshkar Gems", query: "lata mangeshkar top songs" },
+      { name: "A.R. Rahman Magic", query: "ar rahman best songs" },
+      { name: "Pritam Blockbusters", query: "pritam blockbuster hits" },
+      { name: "Sachin-Jigar Bangers", query: "sachin jigar latest hits" },
+      { name: "Vishal-Shekhar Energy", query: "vishal shekhar dance party" },
+
+      // --- Superhit Decades ---
+      { name: "2010s Golden Hits", query: "best of 2010s hindi" },
+      { name: "2020s Blockbusters", query: "hindi top hits 2020s" },
+      { name: "Retro Sad Melodies", query: "old heartbreaking hindi songs" },
+      { name: "70s Evergreen Bollywood", query: "bollywood hits of 1970s" },
+
+      // --- Special Moods & Genres ---
+      { name: "Heartfelt Ghazals", query: "best ghazals jagjit singh pankaj udhas" },
+      { name: "Qawwali Specials", query: "nusrat fateh ali khan qawwali" },
+      { name: "Indie Pop Classics", query: "indian indie pop hits lucky ali" },
+      { name: "Desi Hip Hop", query: "desi hip hop divine emiway" },
+      { name: "Gym Motivation", query: "hindi workout gym hits" },
+
+      // --- Fresh Batch: 15 More Elite Albums ---
+      // Megastars
+      { name: "King of Romance SRK", query: "best of shahrukh khan romantic" },
+      { name: "Salman Khan Blockbusters", query: "salman khan hits" },
+      { name: "Bhaijaan's Best", query: "salman khan dance hits" },
+
+      // Female Power Vocals
+      { name: "Sunidhi Chauhan Fire", query: "sunidhi chauhan dance hits" },
+      { name: "Alka Yagnik Classics", query: "alka yagnik best songs" },
+      { name: "Palak Muchhal Melodies", query: "palak muchhal romantic songs" },
+
+      // Composers & Creators
+      { name: "Mithoon's Masterpieces", query: "mithoon sad romantic hits" },
+      { name: "Amaal Mallik Tunes", query: "amaal mallik best songs" },
+      { name: "Amit Trivedi Vibes", query: "amit trivedi hits" },
+
+      // Genre Specifics
+      { name: "Garba & Dandiya", query: "best garba dandiya songs hindi" },
+      { name: "Wedding Sangeet", query: "bollywood wedding sangeet hits" },
+      { name: "Monsoon Romance", query: "baarish romantic hindi" },
+
+      // Decades & Throwbacks
+      { name: "The Awesome 80s", query: "bollywood 1980s hits" },
+      { name: "Early 2000s Nostalgia", query: "hindi hits 2000 to 2005" },
+      { name: "Late 90s Magic", query: "bollywood hits 1995 to 1999" },
+
+      // --- Massive Expansion: 25+ Trending & Regional Albums ---
+      // Global & National Trending
+      { name: "Top India Trending", query: "trending top 50 india" },
+      { name: "Today's Biggest Hits", query: "today top hits hindi" },
+      { name: "Fresh Releases", query: "arijit jubin new bollywood 2024 2025" },
+
+      // Marathi Trending & Bangers
+      { name: "Sanju Rathod Specials", query: "sanju rathod hits marathi" },
+      { name: "Best of Ajay-Atul", query: "ajay atul marathi hits" },
+      { name: "Marathi Romantic Chartbusters", query: "marathi romantic hit songs" },
+
+      // More Blockbuster Party Albums
+
+      { name: "High Bass Club Mix", query: "dj bass boosted hindi songs" },
+      { name: "New Year Eve Party", query: "new year party songs bollywood" },
+
+      // Even More Hindi Mega Albums
+      { name: "Atif Aslam Masterclass", query: "atif aslam blockbusters" },
+      { name: "Rahat Fateh Ali Khan Melodies", query: "rahat fateh ali khan sad romantic" },
+      { name: "Arijit Singh Unplugged", query: "arijit singh unplugged live" },
+      { name: "B Praak Emotional Hits", query: "b praak sad hits" },
+      { name: "Darshan Raval Love Vibe", query: "darshan raval romantic singles" },
+
+      // Hindi Vibe & Aesthetic
+      { name: "Bollywood Lofi Mix 2025", query: "bollywood lofi chill 2025" },
+      { name: "Midnight Driving Tunes", query: "midnight drive chill hindi" },
+      { name: "Aesthetic Cafe Bollywood", query: "cafe chill acoustic hindi" },
+
+      // Best Collaborations & Duets
+      { name: "Legendary Hindi Duets", query: "hindi romantic duets 90s 2000s" },
+
+      // ===== PARTY: Latest Songs =====
+      { name: "Party Hits 2025", query: "bollywood party hits 2025" },
+      { name: "Badshah Chart Attack", query: "badshah chart hits 2024" },
+      { name: "Latest Party Anthems", query: "party anthems hindi 2024 2025" },
+      { name: "Punjabi X Bollywood Party", query: "punjabi bollywood mashup party" },
+      { name: "Raftaar Hip Hop Party", query: "raftaar hits" },
+      { name: "Night Out Hits", query: "bollywood night out bangers" },
+
+      // ===== HINDI: More Diverse Albums =====
+      { name: "Kumar Sanu Golden Era", query: "kumar sanu hits" },
+      { name: "Mohit Chauhan Feels", query: "mohit chauhan songs" },
+      { name: "Shankar Ehsaan Loy Hits", query: "shankar ehsaan loy bollywood" },
+      { name: "Vishal Dadlani Power", query: "vishal dadlani hits" },
+      { name: "Hindi Film Songs for Rain", query: "rain romantic hindi songs" },
+      { name: "Bollywood Friends Forever", query: "friendship songs hindi bollywood" },
+      { name: "Nineties Blockbuster Hindi", query: "90s blockbuster hindi songs" },
+      { name: "Super Hits of 2022", query: "hindi top hits 2022" },
+      { name: "Super Hits of 2023", query: "hindi blockbusters 2023" },
+      { name: "Super Hits of 2024", query: "bollywood top songs 2024" },
+
+      // ===== NEW ERA: Modern Hindi (2010–2025) =====
+      // Specific Years
+      { name: "Best of 2010", query: "bollywood superhits 2010" },
+      { name: "Top Songs of 2012", query: "bollywood top songs 2012" },
+      { name: "Best of 2015", query: "hindi chartbusters 2015" },
+      { name: "Biggest Hits of 2017", query: "top bollywood songs 2017" },
+      { name: "Best of 2019", query: "hindi blockbusters 2019" },
+      { name: "Super Hits of 2020", query: "hindi superhits 2020" },
+      { name: "Top Songs of 2021", query: "bollywood top hits 2021" },
+      { name: "Fresh 2025 Hindi", query: "new hindi songs 2025" },
+
+      // Modern Artists (2010–2025)
+      { name: "Arijit Singh 2020s", query: "arijit singh hits 2020 2021 2022" },
+      { name: "Jubin Nautiyal Latest", query: "jubin nautiyal songs 2022 2023" },
+      { name: "B Praak Latest Singles", query: "b praak newest songs 2023 2024" },
+      { name: "Sachet-Parampara Love", query: "sachet tandon parampara thakur hits" },
+      { name: "Asees Kaur Melodies", query: "asees kaur best songs" },
+      { name: "Armaan Malik Hits", query: "armaan malik top songs" },
+
+      // Modern Themes
+
+      { name: "OTT Originals Soundtrack", query: "web series ott hindi songs" },
+      { name: "New Year 2025 Hits", query: "best hindi songs january 2025" },
+      { name: "Top 50 Bollywood Now", query: "bollywood top 50 latest" },
+      { name: "Trending Reels 2025", query: "trending reels songs hindi 2025" },
+      { name: "Genre-Bending Bollywood", query: "innovative crossover hindi pop 2024" },
+
+      // ===== WORKING ALBUMS =====
+      { name: "Nonstop Dance Hits", query: "nonstop hindi dance hits" },
+      { name: "KK Memorable Songs", query: "kk best songs" },
+      { name: "Rocky Aur Rani Soundtrack", query: "rocky aur rani ki prem kahani songs" },
+    ];
 
     const albums: any[] = [];
 
-    // Process all queries in batches
-    // Reduced batch size to prevent hitting API rate limits or timeouts
-    for (let i = 0; i < fixedQueries.length; i += 4) {
-      const batch = fixedQueries.slice(i, i + 4);
+    // Removes cover/remix/tribute versions of the same song title
+    const deduplicateByTitleOnly = (songs: JioSaavnTrack[]): JioSaavnTrack[] => {
+      const seenTitles = new Set<string>();
+      return songs.filter(song => {
+        const key = song.title
+          .toLowerCase()
+          .replace(/remix|cover|karaoke|tribute|version|reprise|lofi|acoustic|instrumental|remastered/gi, "")
+          .replace(/[^a-z0-9\s]/gi, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (seenTitles.has(key)) return false;
+        seenTitles.add(key);
+        return true;
+      });
+    };
+
+    // Process all queries in batches of 4
+    for (let i = 0; i < featuredQueries.length; i += 4) {
+      const batch = featuredQueries.slice(i, i + 4);
       const batchResults = await Promise.all(
         batch.map(async (item) => {
           try {
-            // ALWAYS use page 1 to ensure the content is consistent (no "some new coming")
-            const consistentPage = 1;
-
-            // Fetch 50 songs to ensure we have enough after deduplication
-            const result = await jiosaavnApi.searchSongs(item.query, consistentPage, 50);
+            const result = await jiosaavnApi.searchSongs(item.query, 1, 60);
             if (!result.songs?.length) return null;
 
-            const uniqueSongs = deduplicateSongs<JioSaavnTrack>(result.songs).slice(0, 40);
+            // Step 1: standard dedup (by title + artist)
+            const deduped = deduplicateSongs<JioSaavnTrack>(result.songs);
+            // Step 2: title-only dedup — removes covers/remixes of same song
+            const uniqueSongs = deduplicateByTitleOnly(deduped).slice(0, 40);
             if (uniqueSongs.length < 5) return null;
 
-            // Encode query in ID to ensure AlbumDetails fetches the same data
-            // Format: featured_Name:::Query
-            // This fixes the issue where "Marathi Blockbusters" ID searched for "Marathi Blockbusters" instead of "sanju rathod..."
             const safeName = item.name.replace(/\s/g, "_");
             const safeQuery = encodeURIComponent(item.query);
 
@@ -431,10 +578,10 @@ export const jiosaavnApi = {
         })
       );
       albums.push(...batchResults.filter(Boolean));
-      // No break limit - fetch ALL configured albums
     }
     return albums;
   },
+
 
   getSongsByMood: async (mood: string, page = 1, limit = 20) => {
     // Multiple queries per mood for better coverage

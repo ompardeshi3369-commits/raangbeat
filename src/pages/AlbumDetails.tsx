@@ -182,7 +182,7 @@ export default function AlbumDetails() {
                         size="icon"
                         onClick={() => {
                             console.log("Navigating to Hot Albums");
-                            navigate("/", { state: { tab: "albums" } });
+                            navigate("/home", { state: { tab: "albums" } });
                         }}
                         className="rounded-full w-12 h-12 bg-background/20 backdrop-blur-xl border-white/10 hover:bg-primary/20 hover:border-primary/40 transition-all hover:scale-110"
                     >
@@ -194,7 +194,7 @@ export default function AlbumDetails() {
                     <Button
                         variant="secondary"
                         size="icon"
-                        onClick={() => navigate("/", { state: { tab: "albums" } })}
+                        onClick={() => navigate("/home", { state: { tab: "albums" } })}
                         className="rounded-full w-12 h-12 bg-background/20 backdrop-blur-xl border-white/10 hover:bg-red-500/20 hover:border-red-500/40 transition-all hover:scale-110 group"
                     >
                         <X className="w-6 h-6 group-hover:rotate-90 transition-transform" />

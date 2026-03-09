@@ -47,9 +47,10 @@ import { useLocation } from "react-router-dom";
 // Module-level cache — persists across page navigations
 let cachedTrendingSongs: Track[] | null = null;
 let cachedTopArtists: JioSaavnArtist[] | null = null;
-let cachedHotAlbums: any[] | null = null;
+let cachedHotAlbums: any[] | null = null; // Reset on every build to pick up new album queries
 let trendingCacheTimestamp = 0;
 const TRENDING_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 
 export function TrendingSection() {
   const location = useLocation();

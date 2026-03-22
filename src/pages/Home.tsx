@@ -3,7 +3,7 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { jiosaavnApi, JioSaavnTrack } from "@/lib/jiosaavn";
 import { deduplicateSongs, shuffleArray } from "@/lib/musicUtils";
 import { BassReactiveBackground } from "@/components/effects/BassReactiveBackground";
-import { WelcomeAnimation } from "@/components/effects/WelcomeAnimation";
+
 import { TrendingSection } from "@/components/home/TrendingSection";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
@@ -96,7 +96,7 @@ export default function Home() {
   const { toggleFavorite, isFavorite } = useMongoFavorites();
   const [searchParams] = useSearchParams();
   const showAI = searchParams.get('ai') === 'true';
-  const [showWelcome, setShowWelcome] = useState(false);
+
   const [apiTracks, setApiTracks] = useState<Track[]>(cachedApiTracks || []);
   const [isLoading, setIsLoading] = useState(!cachedApiTracks);
   const [allTracksPage, setAllTracksPage] = useState(1);
@@ -221,29 +221,7 @@ export default function Home() {
     }
   };
 
-  // Show welcome animation on every login - uses a one-time session flag
-  // that gets cleared when the page is closed/refreshed before login
-  useEffect(() => {
-    // Check if we've already shown the animation in THIS page load
-    const animationShownThisSession = sessionStorage.getItem('welcome_animation_played');
 
-    if (user && !animationShownThisSession) {
-      setShowWelcome(true);
-      // Mark as shown for this page session only
-      sessionStorage.setItem('welcome_animation_played', 'true');
-    }
-  }, [user]);
-
-  // Clear the session flag when component unmounts (user navigates away or logs out)
-  // This ensures animation plays again on next login
-  useEffect(() => {
-    return () => {
-      // Don't clear if user is still logged in - only clear on logout
-      if (!user) {
-        sessionStorage.removeItem('welcome_animation_played');
-      }
-    };
-  }, [user]);
 
   if (authLoading) {
     return (
@@ -261,10 +239,6 @@ export default function Home() {
 
   return (
     <MainLayout>
-      {/* Welcome celebration animation */}
-      {showWelcome && (
-        <WelcomeAnimation onComplete={() => setShowWelcome(false)} />
-      )}
 
       <div className="min-h-screen pb-32 relative overflow-hidden">
         {/* Bass-reactive pulse effects */}

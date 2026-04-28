@@ -130,7 +130,8 @@
   }
 
   html {
-    @apply scroll-smooth;
+    /* NOTE: scroll-smooth removed — it routes touchpad scroll through JS
+       instead of the native GPU compositor, causing touchpad lag */
     background: #08010f;
     overscroll-behavior: none;
     overflow: hidden;
@@ -154,6 +155,8 @@
     /* root scrolls instead of body */
     overflow-x: hidden;
     height: 100vh;
+    touch-action: pan-y;               /* let browser handle touchpad/touch natively */
+    -webkit-overflow-scrolling: touch; /* momentum scrolling on WebKit */
   }
 
   /* Custom Scrollbar — only shows inside scroll containers, never on page edge */

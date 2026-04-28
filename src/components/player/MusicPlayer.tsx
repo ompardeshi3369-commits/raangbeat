@@ -6,6 +6,7 @@ import { QueueModal } from "./QueueModal";
 import { SleepTimerModal } from "./SleepTimerModal";
 import { EqualizerModal, EqualizerPreset } from "./EqualizerModal";
 import { FullscreenPlayer } from "./FullscreenPlayer";
+import { YouTubeVideoModal } from "./YouTubeVideoModal";
 import { SeekBar } from "./SeekBar";
 import { VolumeBar } from "./VolumeBar";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +29,7 @@ import {
   Flame,
   ChevronUp,
   Maximize2,
+  Youtube,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMongoFavorites } from "@/hooks/useMongoFavorites";
@@ -53,6 +55,7 @@ export function MusicPlayer() {
   const [showQueue, setShowQueue] = useState(false);
   const [showSleepTimer, setShowSleepTimer] = useState(false);
   const [showEqualizer, setShowEqualizer] = useState(false);
+  const [showYouTube, setShowYouTube] = useState(false);
   const [currentLyrics, setCurrentLyrics] = useState<string | null>(null);
   const [isRefreshingLyrics, setIsRefreshingLyrics] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -297,6 +300,19 @@ export function MusicPlayer() {
                 />
               </div>
 
+              {/* YouTube Video Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setShowYouTube(true)}
+                    className="p-2 rounded-full hover:bg-red-600/20 hover:text-red-400 transition-all hover:scale-110 text-muted-foreground"
+                  >
+                    <Youtube className="w-5 h-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Watch Video on YouTube</TooltipContent>
+              </Tooltip>
+
               {/* Fullscreen Button */}
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -462,6 +478,15 @@ export function MusicPlayer() {
         isOpen={showFullscreen}
         onClose={() => setShowFullscreen(false)}
       />
+      {currentTrack && (
+        <YouTubeVideoModal
+          isOpen={showYouTube}
+          onClose={() => setShowYouTube(false)}
+          title={currentTrack.title}
+          artist={currentTrack.artist}
+          coverUrl={currentTrack.coverUrl}
+        />
+      )}
     </>
   );
 }

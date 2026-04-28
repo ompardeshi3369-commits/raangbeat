@@ -1,13 +1,14 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { Home, Library, Users, User, LogOut, Menu, X, Search } from "lucide-react";
+import { Home, Library, Users, User, LogOut, Menu, X, Search, Youtube } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { SearchModal } from "@/components/search/SearchModal";
 
 const navLinks = [
   { to: "/home", label: "Home", icon: Home },
+  { to: "/youtube", label: "Videos", icon: Youtube },
   { to: "/library", label: "Library", icon: Library },
   { to: "/artists", label: "Artists", icon: Users },
   { to: "/profile", label: "Profile", icon: User },

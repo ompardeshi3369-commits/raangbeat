@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useMongoFavorites } from "@/hooks/useMongoFavorites";
+import { useMongoAlbumFavorites } from "@/hooks/useMongoAlbumFavorites";
 import { Navbar } from "@/components/layout/Navbar";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { AddToPlaylistModal } from "@/components/playlist/AddToPlaylistModal";
@@ -51,6 +52,7 @@ export default function AlbumDetails() {
     const { user } = useAuth();
     const { currentTrack, isPlaying, playTrack, togglePlay, setQueue } = usePlayer();
     const { isFavorite, toggleFavorite } = useMongoFavorites();
+    const { isFavorite: isFavoriteAlbum, toggleFavorite: toggleFavoriteAlbum } = useMongoAlbumFavorites();
 
     const [album, setAlbum] = useState<any | null>(null);
     const [tracks, setTracks] = useState<Track[]>([]);
@@ -252,8 +254,18 @@ export default function AlbumDetails() {
                                     Play All
                                 </Button>
 
-                                <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-muted-foreground/30 hover:border-primary hover:text-primary">
-                                    <Heart className="w-5 h-5" />
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => toggleFavoriteAlbum(album.id, {
+                                        title: album.title,
+                                        artist: album.artist,
+                                        coverUrl: album.coverUrl,
+                                        songCount: tracks.length
+                                    })}
+                                    className={`rounded-full h-12 w-12 border-muted-foreground/30 hover:border-primary hover:text-primary ${isFavoriteAlbum(album.id) ? 'text-primary border-primary' : ''}`}
+                                >
+                                    <Heart className={`w-5 h-5 ${isFavoriteAlbum(album.id) ? 'fill-current' : ''}`} />
                                 </Button>
 
                                 <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-muted-foreground/30 hover:border-primary hover:text-primary">

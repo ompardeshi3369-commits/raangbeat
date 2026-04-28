@@ -20,6 +20,8 @@ import Admin from "./pages/Admin";
 import Discover from "./pages/Discover";
 import NotFound from "./pages/NotFound";
 import AlbumDetails from "./pages/AlbumDetails";
+import YouTubePage from "./pages/YouTube";
+import Movies from "./pages/Movies";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +53,8 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/discover" element={<Discover />} />
+              <Route path="/youtube" element={<YouTubePage />} />
+              <Route path="/movies" element={<Movies />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <AuthenticatedMusicPlayer />

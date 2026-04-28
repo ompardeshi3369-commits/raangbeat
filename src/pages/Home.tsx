@@ -85,10 +85,21 @@ const moodColors: Record<string, string> = {
   workout: "from-red-600/30 to-orange-600/20",
 };
 
-// Module-level cache — persists across page navigations within the same tab
-let cachedApiTracks: Track[] | null = null;
-let cacheTimestamp = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// Filter out remixes, mashups, DJ edits — show only original songs
+const isOriginalSong = (title: string) => {
+  const t = title.toLowerCase();
+  return ![
+    "remix", "mashup", "dj ", "lofi", " mix", "medley",
+    "jukebox", "nonstop", "non stop", "karaoke", "tribute",
+    "cover", "reprint", "re-print", "edited", "radio edit",
+    "extended", "instrumental", "reprise",
+  ].some(kw => t.includes(kw));
+};
+
+// Global cache to prevent refetching and loading lag when navigating back to Home
+let cachedHomeTracks: Track[] | null = null;
+let cachedAllTracksPage = 1;
+let cachedHasMore = true;
 
 export default function Home() {
   const { user, isLoading: authLoading } = useAuth();
@@ -97,26 +108,29 @@ export default function Home() {
   const [searchParams] = useSearchParams();
   const showAI = searchParams.get('ai') === 'true';
 
-  const [apiTracks, setApiTracks] = useState<Track[]>(cachedApiTracks || []);
-  const [isLoading, setIsLoading] = useState(!cachedApiTracks);
-  const [allTracksPage, setAllTracksPage] = useState(1);
+  const [apiTracks, setApiTracks] = useState<Track[]>(cachedHomeTracks || []);
+  const [isLoading, setIsLoading] = useState(!cachedHomeTracks);
+  const [allTracksPage, setAllTracksPage] = useState(cachedAllTracksPage);
+  const [visibleCount, setVisibleCount] = useState(20); // start with 20 cards, expand on demand
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(cachedHasMore);
+  const [playlistTrack, setPlaylistTrack] = useState<Track | null>(null); // shared modal
   const TRACKS_PER_PAGE = 20;
 
   // Load songs from JioSaavn API
   useEffect(() => {
     const loadApiSongs = async () => {
-      // Use cache if available and fresh
-      if (cachedApiTracks && (Date.now() - cacheTimestamp < CACHE_TTL)) {
-        setApiTracks(cachedApiTracks);
-        setQueue(cachedApiTracks);
-        setIsLoading(false);
+      // CACHE FIX: If we already have tracks in memory, load them instantly and skip the API fetch!
+      if (cachedHomeTracks && cachedHomeTracks.length > 0) {
+        setQueue(cachedHomeTracks);
         return;
       }
 
-      setIsLoading(!cachedApiTracks); // Only show spinner on first load
+      setIsLoading(true);
       try {
+        // Random page 1-4 so every visit shows different songs
+        const rp = () => Math.floor(Math.random() * 4) + 1;
+
         const [
           trendingRes,
           newReleasesRes,
@@ -127,17 +141,17 @@ export default function Home() {
           devotionalRes,
           popRes
         ] = await Promise.all([
-          jiosaavnApi.getTrending(1, 40),
-          jiosaavnApi.getNewReleases(1, 40),
-          jiosaavnApi.getSongsByMood("romantic", 1, 5), // Reduced from 10
-          jiosaavnApi.getSongsByMood("party", 1, 20),
-          jiosaavnApi.getSongsByMood("chill", 1, 40), // Increased from 30
-          jiosaavnApi.getSongsByMood("workout", 1, 35), // Increased from 30
-          jiosaavnApi.getSongsByMood("devotional", 1, 15),
-          jiosaavnApi.searchSongs("latest pop hindi", 1, 20),
+          jiosaavnApi.getTrending(rp(), 40),
+          jiosaavnApi.getNewReleases(rp(), 40),
+          jiosaavnApi.getSongsByMood("romantic", rp(), 20),
+          jiosaavnApi.getSongsByMood("party", rp(), 20),
+          jiosaavnApi.getSongsByMood("chill", rp(), 30),
+          jiosaavnApi.getSongsByMood("workout", rp(), 30),
+          jiosaavnApi.getSongsByMood("devotional", rp(), 15),
+          jiosaavnApi.searchSongs("latest bollywood hindi", rp(), 20),
         ]);
 
-        // Combine and filter for songs WITH lyrics only + NO remixes/mashups
+        // Combine and filter — only original songs with lyrics, no mashups
         const allSongs = [
           ...(trendingRes?.songs || []),
           ...(newReleasesRes?.songs || []),
@@ -147,36 +161,22 @@ export default function Home() {
           ...(workoutRes?.songs || []),
           ...(devotionalRes?.songs || []),
           ...(popRes?.songs || []),
-        ].filter(song => {
-          if (!song.hasLyrics) return false;
+        ].filter(song => song.hasLyrics && isOriginalSong(song.title));
 
-          // Filter out Remixes, Mashups, DJ versions, and Lofi Flips
-          const titleLower = song.title.toLowerCase();
-          if (titleLower.includes("remix") ||
-            titleLower.includes("mashup") ||
-            titleLower.includes("dj") ||
-            titleLower.includes("lofi") ||
-            titleLower.includes("mix") ||
-            titleLower.includes("reprint") ||
-            titleLower.includes("version")) {
-            return false;
-          }
-          return true;
-        });
-
-        // Advanced deduplication
+        // Deduplicate + shuffle for fresh order every visit
         const uniqueSongs = deduplicateSongs(allSongs);
         const shuffledSongs = shuffleArray(uniqueSongs);
 
-        // Assign moods based on song title/content keywords
-        const tracks = shuffledSongs.map((song) => jiosaavnToTrack(song as JioSaavnTrack, detectMood(song.title, song.artist)));
-
-        // Update cache
-        cachedApiTracks = tracks;
-        cacheTimestamp = Date.now();
+        // Assign moods
+        const tracks = shuffledSongs.map((song) =>
+          jiosaavnToTrack(song as JioSaavnTrack, detectMood(song.title, song.artist))
+        );
 
         setApiTracks(tracks);
         setQueue(tracks);
+        
+        // Save to cache so next visit is instant!
+        cachedHomeTracks = tracks;
       } catch (error) {
         console.error("Error loading songs from JioSaavn:", error);
       } finally {
@@ -189,9 +189,19 @@ export default function Home() {
     }
   }, [user, setQueue]);
 
-  // Load more tracks from next API page (same pattern as Discover page)
+  // Load more: first expand already-loaded tracks, then fetch from API
   const loadMoreTracks = async () => {
-    if (isLoadingMore || !hasMore) return;
+    if (isLoadingMore) return;
+
+    // If there are more cached tracks not yet shown, just reveal them
+    const currentShown = visibleCount;
+    const totalLoaded = apiTracks.length - 15; // first 15 in trending
+    if (currentShown < totalLoaded) {
+      setVisibleCount(prev => prev + TRACKS_PER_PAGE);
+      return;
+    }
+
+    if (!hasMore) return;
     setIsLoadingMore(true);
     try {
       const nextPage = allTracksPage + 1;
@@ -202,17 +212,22 @@ export default function Home() {
       const newSongs = [
         ...(trendingRes?.songs || []),
         ...(newReleasesRes?.songs || []),
-      ].filter(s => s.hasLyrics);
+      ].filter(s => s.hasLyrics && isOriginalSong(s.title));
 
       if (newSongs.length === 0) {
         setHasMore(false);
+        cachedHasMore = false;
       } else {
         const newTracks = newSongs.map(s => jiosaavnToTrack(s as JioSaavnTrack, detectMood(s.title, s.artist)));
         setApiTracks(prev => {
           const existingIds = new Set(prev.map(t => t.id));
-          return [...prev, ...newTracks.filter(t => !existingIds.has(t.id))];
+          const updated = [...prev, ...newTracks.filter(t => !existingIds.has(t.id))];
+          cachedHomeTracks = updated; // Update cache
+          return updated;
         });
+        setVisibleCount(prev => prev + TRACKS_PER_PAGE);
         setAllTracksPage(nextPage);
+        cachedAllTracksPage = nextPage;
       }
     } catch (err) {
       console.error("Error loading more tracks:", err);
@@ -353,7 +368,7 @@ export default function Home() {
             </section>
           )}
 
-          {/* Track List */}
+          {/* Track List — shared playlist modal at section level, not per-card */}
           <section>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold flex items-center gap-2">
@@ -370,11 +385,24 @@ export default function Home() {
                 </Link>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {apiTracks.slice(15).map((track, index) => ( // Skip first 15 which are in trending
-                <TrackCard key={track.id} track={track} index={index} />
+            {/* Single shared playlist modal — one instance for all cards */}
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              style={{ contentVisibility: "auto" }}
+            >
+              {apiTracks.slice(15, 15 + visibleCount).map((track) => (
+                <TrackCard key={track.id} track={track} onAddToPlaylist={setPlaylistTrack} />
               ))}
             </div>
+            {playlistTrack && (
+              <AddToPlaylistModal
+                isOpen={!!playlistTrack}
+                onClose={() => setPlaylistTrack(null)}
+                songId={playlistTrack.id}
+                songTitle={playlistTrack.title}
+                trackData={playlistTrack}
+              />
+            )}
             {/* Load More button — same pattern as Discover page */}
             <div className="flex justify-center mt-8 mb-2">
               {hasMore ? (
@@ -406,24 +434,21 @@ export default function Home() {
   );
 }
 
-function TrackCard({ track, index }: { track: Track; index: number }) {
+function TrackCard({ track, onAddToPlaylist }: { track: Track; onAddToPlaylist: (t: Track) => void }) {
   const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayer();
   const { toggleFavorite, isFavorite } = useMongoFavorites();
-  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const isActive = currentTrack?.id === track.id;
 
   return (
-    <>
-      <GlassCard
-        className={cn(
-          "p-4 flex items-center gap-3 transition-all duration-300",
-          isActive && isPlaying && `bg-gradient-to-r ${moodColors[track.mood || ""] || "from-primary/10 to-accent/5"}`
-        )}
-        hover
-        style={{ animationDelay: `${index * 50}ms` }}
-      >
-        <div className="relative group cursor-pointer flex-shrink-0" onClick={() => isActive ? togglePlay() : playTrack(track)}>
-          <img src={track.coverUrl} alt={track.title} className="w-12 h-12 rounded-lg object-cover transition-transform group-hover:scale-105" />
+    <GlassCard
+      className={cn(
+        "p-4 flex items-center gap-3 transition-colors duration-200",
+        isActive && isPlaying && `bg-gradient-to-r ${moodColors[track.mood || ""] || "from-primary/10 to-accent/5"}`
+      )}
+      hover
+    >
+      <div className="relative group cursor-pointer flex-shrink-0" onClick={() => isActive ? togglePlay() : playTrack(track)}>
+        <img src={track.coverUrl} alt={track.title} loading="lazy" className="w-12 h-12 rounded-lg object-cover" />
           {isActive && isPlaying && (
             <div className="absolute inset-0 rounded-lg border-2 border-primary animate-pulse" />
           )}
@@ -451,41 +476,25 @@ function TrackCard({ track, index }: { track: Track; index: number }) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <AnimatedActionButton
-            type="playlist"
-            onClick={() => setShowPlaylistModal(true)}
-            title="Add to playlist"
-            className="!p-1.5"
-          >
-            <ListMusic className="w-4 h-4" />
-          </AnimatedActionButton>
-          <AnimatedActionButton
-            type="like"
-            onClick={() => toggleFavorite(track.id, track)}
-            isActive={isFavorite(track.id)}
-            className="!p-1.5"
-          >
-            <Heart className={cn("w-4 h-4", isFavorite(track.id) && "fill-current")} />
-          </AnimatedActionButton>
-          {isActive && <AudioVisualizer isPlaying={isPlaying} barCount={4} className="w-6 h-6" />}
-        </div>
-      </GlassCard>
-
-      <AddToPlaylistModal
-        isOpen={showPlaylistModal}
-        onClose={() => setShowPlaylistModal(false)}
-        songId={track.id}
-        songTitle={track.title}
-        trackData={{
-          title: track.title,
-          artist: track.artist,
-          artistId: track.artistId,
-          coverUrl: track.coverUrl,
-          audioUrl: track.audioUrl,
-          duration: track.duration,
-        }}
-      />
-    </>
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <AnimatedActionButton
+          type="playlist"
+          onClick={() => onAddToPlaylist(track)}
+          title="Add to playlist"
+          className="!p-1.5"
+        >
+          <ListMusic className="w-4 h-4" />
+        </AnimatedActionButton>
+        <AnimatedActionButton
+          type="like"
+          onClick={() => toggleFavorite(track.id, track)}
+          isActive={isFavorite(track.id)}
+          className="!p-1.5"
+        >
+          <Heart className={cn("w-4 h-4", isFavorite(track.id) && "fill-current")} />
+        </AnimatedActionButton>
+        {isActive && <AudioVisualizer isPlaying={isPlaying} barCount={4} className="w-6 h-6" />}
+      </div>
+    </GlassCard>
   );
 }

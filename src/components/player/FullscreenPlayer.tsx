@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { SeekBar } from "./SeekBar";
 import { VolumeBar } from "./VolumeBar";
+import { YouTubeVideoModal } from "./YouTubeVideoModal";
 import { useMongoFavorites } from "@/hooks/useMongoFavorites";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,7 @@ import {
   Heart,
   X,
   Music2,
+  Youtube,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -171,11 +173,13 @@ export function FullscreenPlayer({ isOpen, onClose }: FullscreenPlayerProps) {
   const [rendered, setRendered] = useState(false);
   const [visible, setVisible] = useState(false);
   const [showContent, setShowContent] = useState(false);
+  const [showYouTube, setShowYouTube] = useState(false);
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [activeLyricLine, setActiveLyricLine] = useState(0);
   const lyricsRef = useRef<HTMLDivElement>(null);
 
   const parsedLyrics = useMemo(() => lyrics ? parseLrc(lyrics) : [], [lyrics]);
+  const isSyncedLyrics = useMemo(() => parsedLyrics.some(p => p.time !== -1), [parsedLyrics]);
 
   useEffect(() => {
     setMounted(true);
@@ -200,33 +204,127 @@ export function FullscreenPlayer({ isOpen, onClose }: FullscreenPlayerProps) {
     fetchLyrics();
   }, [currentTrack?.id]);
 
-  // Auto-scroll lyrics based on progress (throttled)
+  // ── High-Performance 60fps Lyrics Engine (Direct DOM + Interpolation) ──
+  const lastProgressRef = useRef(progress);
+  const lastUpdateRef = useRef(performance.now());
   const lastLineRef = useRef(-1);
+  const smoothedNowRef = useRef(progress);
+
+  // Sync our interpolation baseline when React state updates (every ~250ms)
   useEffect(() => {
-    if (parsedLyrics.length === 0 || !duration) return;
+    lastProgressRef.current = progress;
+    lastUpdateRef.current = performance.now();
+  }, [progress]);
 
-    const isSynced = parsedLyrics.some(p => p.time !== -1);
-    let idx = 0;
+  useEffect(() => {
+    if (!isPlaying || !isSyncedLyrics || parsedLyrics.length === 0) return;
 
-    if (isSynced) {
-      for (let i = 0; i < parsedLyrics.length; i++) {
-        if (progress >= parsedLyrics[i].time) {
-          idx = i;
-        } else {
-          break;
-        }
+    let rafId: number;
+    const loop = () => {
+      rafId = requestAnimationFrame(loop);
+
+      // Interpolate time smoothly between 250ms audio ticks
+      const elapsed = (performance.now() - lastUpdateRef.current) / 1000;
+      let now = lastProgressRef.current + elapsed;
+
+      // Prevent micro-backward jumps due to audio timeupdate sync jitter.
+      // If the jump is larger than 1.5s, the user actually clicked the seekbar, so allow it.
+      if (Math.abs(now - smoothedNowRef.current) < 1.5) {
+        now = Math.max(now, smoothedNowRef.current);
       }
-    } else {
-      const pct = progress / duration;
-      idx = Math.min(Math.floor(pct * parsedLyrics.length), parsedLyrics.length - 1);
-    }
+      smoothedNowRef.current = now;
 
-    // Only update state if line actually changed
+      // Find active line
+      let activeIdx = 0;
+      for (let i = 0; i < parsedLyrics.length; i++) {
+        if (now >= parsedLyrics[i].time) activeIdx = i;
+        else break;
+      }
+
+      // Update React state ONLY if the active line changes (for scrolling/sizing)
+      if (activeIdx !== lastLineRef.current) {
+        lastLineRef.current = activeIdx;
+        setActiveLyricLine(activeIdx);
+      }
+
+      // Direct DOM manipulation for words (Zero React Overhead)
+      if (!lyricsRef.current) return;
+      const lineEl = lyricsRef.current.querySelector(`[data-lyric="${activeIdx}"]`);
+      if (!lineEl) return;
+
+      const wordEls = lineEl.querySelectorAll('.lyric-word');
+      if (wordEls.length === 0) return;
+
+      const lineStart = parsedLyrics[activeIdx].time;
+      const nextLine = parsedLyrics[activeIdx + 1];
+      const rawGap = nextLine ? nextLine.time - lineStart : 8; // Default 8s for last line
+
+      // Proportional timing: longer words get more time
+      const words = Array.from(wordEls).map(el => el.textContent || '');
+      const totalChars = words.reduce((sum, w) => sum + w.length, 0);
+
+      // Give it more time to breathe! 92% of the gap, max 1.0s per word
+      const lineDur = Math.min(rawGap * 0.92, words.length * 1.0);
+
+      let currentStartTime = lineStart;
+
+      wordEls.forEach((el, wi) => {
+        const word = words[wi];
+        const weight = word.length + 1; // +1 for the space pause
+        const wDur = (weight / (totalChars + words.length)) * lineDur;
+
+        const wStart = currentStartTime;
+        const wEnd = wStart + wDur;
+        currentStartTime = wEnd;
+
+        let fillPct = 0;
+        if (now >= wEnd) fillPct = 100;
+        else if (now >= wStart) fillPct = ((now - wStart) / wDur) * 100;
+
+        const htmlEl = el as HTMLElement;
+        if (now >= wEnd) {
+          // Past
+          htmlEl.style.backgroundImage = 'none';
+          htmlEl.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+          htmlEl.style.filter = 'none';
+        } else if (now < wStart) {
+          // Future
+          htmlEl.style.backgroundImage = 'none';
+          htmlEl.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
+          htmlEl.style.filter = 'none';
+        } else {
+          // Actively singing: Ultra-smooth "liquid water" sweeping gradient
+          // We map fillPct (0-100) to a gradient that starts completely off-screen left (-80%)
+          // and ends fully on-screen (100%), so the first letter doesn't instantly snap to white!
+          const feather = 80;
+          const gradientStart = (fillPct / 100) * (100 + feather) - feather;
+
+          htmlEl.style.backgroundImage = `linear-gradient(to right, rgba(255,255,255,0.95) ${gradientStart}%, rgba(255,255,255,0.25) ${gradientStart + feather}%)`;
+          htmlEl.style.backgroundColor = 'transparent';
+          htmlEl.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.3))';
+        }
+      });
+
+    };
+
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [isPlaying, isSyncedLyrics, parsedLyrics]); // Omit progress to prevent restart
+
+  // Auto-scroll logic is handled by activeLyricLine changing
+
+  // Fallback auto-scroll for unsynced lyrics
+  useEffect(() => {
+    if (parsedLyrics.length === 0 || !duration || isSyncedLyrics) return;
+
+    const pct = progress / duration;
+    const idx = Math.min(Math.floor(pct * parsedLyrics.length), parsedLyrics.length - 1);
+
     if (idx !== lastLineRef.current) {
       lastLineRef.current = idx;
       setActiveLyricLine(idx);
     }
-  }, [progress, duration, parsedLyrics]);
+  }, [progress, duration, parsedLyrics, isSyncedLyrics]);
 
   // Center active lyric with smooth scroll (no scrollIntoView — it's laggy)
   useEffect(() => {
@@ -292,6 +390,8 @@ export function FullscreenPlayer({ isOpen, onClose }: FullscreenPlayerProps) {
         @keyframes vinylSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         @keyframes pulseRing { 0%,100%{transform:scale(1);opacity:0.4} 50%{transform:scale(1.08);opacity:0.7} }
         @keyframes lyricsGlow { 0%,100%{text-shadow:0 0 20px rgba(255,100,200,0.3)} 50%{text-shadow:0 0 40px rgba(255,100,200,0.6),0 0 80px rgba(200,100,255,0.3)} }
+        @keyframes wordPop { 0%{transform:scale(0.85);opacity:0} 60%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+        .lyric-line { transform-origin: left center; }
       `}</style>
 
       {/* Deep dark base */}
@@ -510,6 +610,16 @@ export function FullscreenPlayer({ isOpen, onClose }: FullscreenPlayerProps) {
               </button>
             )}
 
+            {/* YouTube Watch Video Button */}
+            <button
+              onClick={() => setShowYouTube(true)}
+              className="p-3 rounded-full transition-all duration-300 hover:scale-110 border border-white/5 bg-white/5 text-red-400/70 hover:text-red-400 hover:bg-red-600/20 hover:shadow-lg hover:shadow-red-500/20 flex items-center gap-2"
+              title="Watch music video on YouTube"
+            >
+              <Youtube className="w-6 h-6" />
+              <span className="text-sm font-medium hidden sm:inline">Watch Video</span>
+            </button>
+
             <div className="flex items-center gap-3 bg-white/5 backdrop-blur-xl rounded-full px-4 py-2.5 border border-white/5">
               <button
                 onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
@@ -526,7 +636,7 @@ export function FullscreenPlayer({ isOpen, onClose }: FullscreenPlayerProps) {
         <div
           ref={lyricsRef}
           className={cn(
-            "flex-1 max-w-xl lg:max-w-2xl h-[40vh] lg:h-[70vh] overflow-y-auto scrollbar-hide focus:outline-none pl-12",
+            "flex-1 max-w-xl lg:max-w-2xl h-[40vh] lg:h-[70vh] overflow-y-auto scrollbar-hide focus:outline-none pl-8 pr-8 lg:pl-12 lg:pr-12",
             showContent ? "opacity-100 translate-x-0" : "opacity-0 translate-x-10"
           )}
           style={{
@@ -538,37 +648,70 @@ export function FullscreenPlayer({ isOpen, onClose }: FullscreenPlayerProps) {
           }}
         >
           {parsedLyrics.length > 0 ? (
-            <div className="space-y-5 py-40"> {/* Large padding for scrolling comfort */}
+            <div className="space-y-6 py-40">
               {parsedLyrics.map((line, index) => {
                 const isActive = index === activeLyricLine;
                 const distance = Math.abs(index - activeLyricLine);
+                const isPast = index < activeLyricLine;
                 const isClickable = line.time !== -1;
+                const words = line.text.split(' ').filter(w => w.length > 0);
+
+                // ── Line visual state (GPU-accelerated transforms for fluid motion) ──
+                const scale = isActive ? 1.04 : Math.max(0.78, 0.96 - distance * 0.04);
+                const lineOpacity = isActive ? 1 : Math.max(0.1, isPast ? 0.38 - distance * 0.05 : 0.25 - distance * 0.04);
 
                 return (
-                  <p
+                  <div
                     key={index}
                     data-lyric={index}
                     onClick={() => isClickable && seekTo(line.time)}
                     className={cn(
-                      "text-2xl sm:text-3xl lg:text-4xl font-semibold leading-relaxed origin-left",
-                      isClickable ? "cursor-pointer hover:text-white/80" : "cursor-default",
-                      isActive
-                        ? "text-white scale-105"
-                        : distance === 1
-                          ? "text-white/50 scale-100"
-                          : distance === 2
-                            ? "text-white/25 scale-100"
-                            : "text-white/15 scale-100"
+                      "lyric-line text-2xl sm:text-3xl lg:text-4xl font-bold leading-relaxed",
+                      isClickable ? "cursor-pointer" : "cursor-default"
                     )}
                     style={{
-                      transition: "color 0.3s ease, opacity 0.3s ease, transform 0.3s ease",
-                      textShadow: isActive
-                        ? "0 0 30px rgba(255,100,200,0.5), 0 0 60px rgba(150,50,255,0.3)"
-                        : "none",
+                      transform: `scale(${scale})`,
+                      opacity: lineOpacity,
+                      transition: "transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease",
+                      transformOrigin: "left center",
+                      willChange: "transform, opacity",
                     }}
                   >
-                    {line.text || "♪"}
-                  </p>
+                    {/* ── Word Elements (manipulated directly via DOM for 0 React overhead) ── */}
+                    {isSyncedLyrics && line.time !== -1 ? (
+                      <span>
+                        {words.map((word, wi) => (
+                          <span
+                            key={wi}
+                            className="lyric-word"
+                            style={{
+                              backgroundColor: isPast ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.25)',
+                              backgroundImage: 'none',
+                              WebkitBackgroundClip: 'text',
+                              backgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              display: 'inline-block',
+                              filter: 'none',
+                              marginRight: '0', /* Removed negative margin so the browser wraps lines correctly! */
+                              padding: '0.15em 0.15em', /* Keeps the text from clipping its own bounds without breaking layout */
+                              willChange: 'background-image, filter',
+                            }}
+                          >
+                            {word}
+                          </span>
+                        ))}
+                      </span>
+                    ) : (
+                      /* ── Unsynced lyrics: plain text ── */
+                      <span
+                        style={{
+                          color: isPast ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.22)",
+                        }}
+                      >
+                        {line.text || "♪"}
+                      </span>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -583,5 +726,19 @@ export function FullscreenPlayer({ isOpen, onClose }: FullscreenPlayerProps) {
     </div>
   );
 
-  return createPortal(content, document.body);
+  return createPortal(
+    <>
+      {content}
+      {currentTrack && (
+        <YouTubeVideoModal
+          isOpen={showYouTube}
+          onClose={() => setShowYouTube(false)}
+          title={currentTrack.title}
+          artist={currentTrack.artist}
+          coverUrl={currentTrack.coverUrl}
+        />
+      )}
+    </>,
+    document.body
+  );
 }

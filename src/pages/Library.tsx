@@ -5,6 +5,7 @@ import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { useMongoFavorites } from "@/hooks/useMongoFavorites";
 import { useMongoPlaylists } from "@/hooks/useMongoPlaylists";
 import { useMongoRecentlyPlayed } from "@/hooks/useMongoRecentlyPlayed";
+import { useMongoAlbumFavorites } from "@/hooks/useMongoAlbumFavorites";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
@@ -13,7 +14,7 @@ import { AddToPlaylistModal } from "@/components/playlist/AddToPlaylistModal";
 import { songsApi, MongoSong, MongoPlaylist } from "@/lib/mongodb";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatedActionButton } from "@/components/ui/AnimatedActionButton";
-import { Heart, Clock, ListMusic, Play, Pause, Loader2, Plus, Trash2, ListPlus } from "lucide-react";
+import { Heart, Clock, ListMusic, Play, Pause, Loader2, Plus, Trash2, ListPlus, Disc3 } from "lucide-react";
 
 // Helper to convert MongoDB song to Track
 const mongoSongToTrack = (song: MongoSong): Track => ({
@@ -143,6 +144,7 @@ export default function Library() {
   const { user, isLoading: authLoading } = useAuth();
   const { currentTrack, isPlaying, playTrack, togglePlay, queue } = usePlayer();
   const { favorites, isFavorite, toggleFavorite, favoriteMetadata, getFavoriteMetadata } = useMongoFavorites();
+  const { favorites: albumFavorites, favoriteMetadata: albumMetadata } = useMongoAlbumFavorites();
   const { playlists, isLoading: playlistsLoading, createPlaylist, deletePlaylist, removeSongFromPlaylist } = useMongoPlaylists();
   const { history, isLoading: historyLoading } = useMongoRecentlyPlayed();
   const { toast } = useToast();
@@ -150,9 +152,9 @@ export default function Library() {
 
   // Read tab from URL, default to "favorites"
   const tabParam = searchParams.get("tab");
-  const activeTab = (tabParam === "recent" || tabParam === "playlists") ? tabParam : "favorites";
+  const activeTab = (tabParam === "recent" || tabParam === "playlists" || tabParam === "albums") ? tabParam : "favorites";
 
-  const setActiveTab = (tab: "favorites" | "recent" | "playlists") => {
+  const setActiveTab = (tab: "favorites" | "recent" | "playlists" | "albums") => {
     setSearchParams({ tab });
   };
 
@@ -422,12 +424,13 @@ export default function Library() {
           <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
             {[
               { id: "favorites", label: "Favorites", icon: Heart, count: favoriteTracks.length },
+              { id: "albums", label: "Albums", icon: Disc3, count: albumFavorites.size },
               { id: "recent", label: "Recently Played", icon: Clock, count: recentlyPlayedTracks.length },
               { id: "playlists", label: "Playlists", icon: ListMusic, count: playlists.length },
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as "favorites" | "recent" | "playlists")}
+                onClick={() => setActiveTab(tab.id as "favorites" | "albums" | "recent" | "playlists")}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all ${activeTab === tab.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted/50 text-muted-foreground hover:bg-muted"
@@ -457,6 +460,66 @@ export default function Library() {
                     favoriteTracks.map((track) => (
                       <TrackRow key={track.id} track={track} />
                     ))
+                  )}
+                </div>
+              )}
+
+              {/* Albums */}
+              {activeTab === "albums" && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+                  {albumFavorites.size === 0 ? (
+                    <p className="text-muted-foreground col-span-full text-center py-12">
+                      No favorite albums yet. Heart some albums to see them here!
+                    </p>
+                  ) : (
+                    Array.from(albumFavorites).map((albumId) => {
+                      const meta = albumMetadata.get(albumId)?.metadata;
+                      if (!meta) return null;
+                      return (
+                        <Link to={`/album/${albumId}`} key={albumId}>
+                          <div className="relative group cursor-pointer w-full rounded-2xl overflow-hidden shadow-lg transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:-translate-y-2 border border-white/5 hover:border-primary/50">
+                            
+                            {/* Base Album Cover */}
+                            <div className="relative aspect-square w-full overflow-hidden bg-black">
+                              <img src={meta.coverUrl} alt={meta.title} className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110 group-hover:rotate-1" />
+                              
+                              {/* Darkening Overlay */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
+                              
+                              {/* Holographic Sweep / Shimmer Effect */}
+                              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none mix-blend-overlay">
+                                <div className="absolute inset-0 -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-[2s] ease-in-out bg-gradient-to-r from-transparent via-white/50 to-transparent skew-x-[-30deg]" />
+                              </div>
+
+                              {/* Play Button - Fades in at center */}
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                                <div className="w-14 h-14 rounded-full bg-primary/90 flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary),0.6)] transform scale-75 group-hover:scale-100 transition-all duration-500 backdrop-blur-md">
+                                  <Play className="w-6 h-6 text-primary-foreground ml-1" />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Sliding Glass Info Panel */}
+                            <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-4 translate-y-4 group-hover:translate-y-0 transition-transform duration-500 ease-out">
+                              <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl p-2.5 sm:p-3 shadow-2xl relative overflow-hidden">
+                                {/* Subtle primary glow inside the glass */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                
+                                <div className="relative z-10">
+                                  <p className="font-bold truncate text-sm sm:text-base text-white">{meta.title}</p>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <p className="text-xs text-white/70 truncate flex-1">{meta.artist}</p>
+                                    <span className="text-[9px] font-bold uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded-full text-white/90 ml-2 border border-white/5 whitespace-nowrap">
+                                      {meta.songCount || 0} Tracks
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })
                   )}
                 </div>
               )}

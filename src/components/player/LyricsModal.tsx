@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Music2, RefreshCw } from "lucide-react";
+import { Music2, RefreshCw, ExternalLink } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +42,12 @@ const parseLrc = (lrc: string): ParsedLyric[] => {
   });
   return result;
 };
+
+// Build Genius search URL directly — reliable, no CORS issues
+function geniusSearchUrl(title: string, artist: string): string {
+  const q = encodeURIComponent(`${title} ${artist}`);
+  return `https://genius.com/search?q=${q}`;
+}
 
 interface LyricsModalProps {
   isOpen: boolean;
@@ -90,12 +96,10 @@ export function LyricsModal({ isOpen, onClose, title, artist, lyrics, mood, onRe
 
   // Handle line click
   const handleLineClick = (time: number) => {
-    if (time !== -1) {
-      seekTo(time);
-    }
+    if (time !== -1) seekTo(time);
   };
 
-  // Center active lyric smoothly
+  // Center active lyric smoothly — debounced via rAF to prevent scroll fighting
   useEffect(() => {
     if (!scrollRef.current || activeLine === -1) return;
     const container = scrollRef.current;
@@ -108,8 +112,12 @@ export function LyricsModal({ isOpen, onClose, title, artist, lyrics, mood, onRe
     const activeRect = activeEl.getBoundingClientRect();
     const targetScroll = viewport.scrollTop + (activeRect.top - viewportRect.top) - viewportRect.height / 2 + activeRect.height / 2;
 
-    viewport.scrollTo({ top: targetScroll, behavior: "smooth" });
+    requestAnimationFrame(() => {
+      viewport.scrollTo({ top: targetScroll, behavior: "smooth" });
+    });
   }, [activeLine]);
+
+  const geniusUrl = geniusSearchUrl(title, artist);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -136,19 +144,36 @@ export function LyricsModal({ isOpen, onClose, title, artist, lyrics, mood, onRe
                 <Music2 className="w-5 h-5 flex-shrink-0" />
                 <span className="truncate">{title}</span>
               </div>
-              {onRefresh && (
-                <button
-                  onClick={onRefresh}
-                  disabled={isRefreshing}
-                  className="p-1.5 rounded-full hover:bg-white/20 transition-colors disabled:opacity-50 mr-8"
-                  title="Refresh lyrics"
+
+              <div className="flex items-center gap-1 mr-8">
+                {/* Genius button */}
+                <a
+                  href={geniusUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="View full lyrics on Genius"
+                  className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-300 hover:text-yellow-200 transition-all duration-200 border border-yellow-500/30"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                </button>
-              )}
+                  <ExternalLink className="w-3 h-3" />
+                  Genius
+                </a>
+
+                {/* Refresh button */}
+                {onRefresh && (
+                  <button
+                    onClick={onRefresh}
+                    disabled={isRefreshing}
+                    className="p-1.5 rounded-full hover:bg-white/20 transition-colors disabled:opacity-50"
+                    title="Refresh lyrics"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </button>
+                )}
+              </div>
             </DialogTitle>
             <p className="text-sm text-white/70 ml-7">{artist}</p>
           </DialogHeader>
+
           <ScrollArea className="h-[400px] mt-4" ref={scrollRef}>
             {parsedLyrics.length > 0 ? (
               <div className="space-y-4 pr-4 py-32">
@@ -162,14 +187,17 @@ export function LyricsModal({ isOpen, onClose, title, artist, lyrics, mood, onRe
                       data-line-index={index}
                       onClick={() => isClickable && handleLineClick(line.time)}
                       className={cn(
-                        "text-lg leading-relaxed whitespace-pre-line text-shadow origin-left",
-                        isClickable ? "cursor-pointer hover:text-white" : "cursor-default",
-                        isActive
-                          ? "text-white font-bold scale-105"
-                          : "text-white/60 hover:text-white/80 scale-100"
+                        "text-lg leading-relaxed whitespace-pre-line",
+                        isClickable ? "cursor-pointer" : "cursor-default",
+                        isActive ? "text-white font-bold" : "text-white/50 font-normal"
                       )}
                       style={{
-                        transition: "color 0.3s ease, opacity 0.3s ease, transform 0.3s ease",
+                        // Only color/glow — NO scale/transform (prevents shaking)
+                        transition: "color 0.4s ease, text-shadow 0.4s ease",
+                        textShadow: isActive
+                          ? "0 0 20px rgba(255,255,255,0.6), 0 0 40px rgba(255,100,100,0.3)"
+                          : "none",
+                        willChange: "color",
                       }}
                     >
                       {line.text || "♪"}
@@ -178,9 +206,19 @@ export function LyricsModal({ isOpen, onClose, title, artist, lyrics, mood, onRe
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-white/60">
-                <Music2 className="w-12 h-12 mb-4 opacity-50" />
-                <p>Lyrics not available for this song</p>
+              <div className="flex flex-col items-center justify-center h-full text-white/60 gap-4">
+                <Music2 className="w-12 h-12 opacity-30" />
+                <p className="text-sm">Lyrics not available for this song</p>
+                {/* Genius fallback when no lyrics found */}
+                <a
+                  href={geniusUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 text-sm font-medium transition-all border border-yellow-500/30"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Search lyrics on Genius
+                </a>
               </div>
             )}
           </ScrollArea>

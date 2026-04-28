@@ -130,16 +130,20 @@ function SongCard({ song, index, onPlay, showRank, mood }: SongCardProps) {
   );
 }
 
-// Module-level cache — persists across page navigations
-let cachedDiscoverTrending: JioSaavnTrack[] | null = null;
-let cachedDiscoverNewReleases: JioSaavnTrack[] | null = null;
-let cachedMoodSongsMap: Record<string, JioSaavnTrack[]> = {};
-let discoverCacheTimestamp = 0;
-const DISCOVER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// Filter out remixes, mashups, DJ edits — original songs only
+const isOriginalSong = (title: string) => {
+  const t = title.toLowerCase();
+  return ![
+    "remix", "mashup", "dj ", "lofi", " mix", "medley",
+    "jukebox", "nonstop", "non stop", "karaoke", "tribute",
+    "cover", "reprint", "re-print", "edited", "radio edit",
+    "extended", "instrumental", "reprise",
+  ].some(kw => t.includes(kw));
+};
 
 export default function Discover() {
-  const [trending, setTrending] = useState<JioSaavnTrack[]>(cachedDiscoverTrending || []);
-  const [newReleases, setNewReleases] = useState<JioSaavnTrack[]>(cachedDiscoverNewReleases || []);
+  const [trending, setTrending] = useState<JioSaavnTrack[]>([]);
+  const [newReleases, setNewReleases] = useState<JioSaavnTrack[]>([]);
   const [moodSongs, setMoodSongs] = useState<JioSaavnTrack[]>([]);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
 
@@ -147,8 +151,8 @@ export default function Discover() {
   const [newReleasesPage, setNewReleasesPage] = useState(1);
   const [moodPage, setMoodPage] = useState(1);
 
-  const [isLoadingTrending, setIsLoadingTrending] = useState(!cachedDiscoverTrending);
-  const [isLoadingNew, setIsLoadingNew] = useState(!cachedDiscoverNewReleases);
+  const [isLoadingTrending, setIsLoadingTrending] = useState(true);
+  const [isLoadingNew, setIsLoadingNew] = useState(true);
   const [isLoadingMood, setIsLoadingMood] = useState(false);
 
   const [isLoadingMoreTrending, setIsLoadingMoreTrending] = useState(false);
@@ -163,23 +167,17 @@ export default function Discover() {
   }, []);
 
   const loadTrending = async () => {
-    // Use cache if fresh
-    if (cachedDiscoverTrending && (Date.now() - discoverCacheTimestamp < DISCOVER_CACHE_TTL)) {
-      setTrending(cachedDiscoverTrending);
-      setIsLoadingTrending(false);
-      return;
-    }
-
-    setIsLoadingTrending(!cachedDiscoverTrending);
+    setIsLoadingTrending(true);
     try {
-      const result = await jiosaavnApi.getTrending(1, 40);
-      const songs = deduplicateSongs((result.songs || []).filter(s => s.hasLyrics === true)) as JioSaavnTrack[];
+      // Random page 1-4 for fresh songs every visit
+      const page = Math.floor(Math.random() * 4) + 1;
+      const result = await jiosaavnApi.getTrending(page, 40);
+      // Filter: must have lyrics AND be original (no mashups/remixes)
+      const songs = deduplicateSongs(
+        (result.songs || []).filter(s => s.hasLyrics === true && isOriginalSong(s.title))
+      ) as JioSaavnTrack[];
       setTrending(songs);
-      setTrendingPage(1);
-
-      // Update cache
-      cachedDiscoverTrending = songs;
-      discoverCacheTimestamp = Date.now();
+      setTrendingPage(page);
     } catch (error) {
       console.error("Failed to load trending:", error);
     } finally {
@@ -205,22 +203,17 @@ export default function Discover() {
   };
 
   const loadNewReleases = async () => {
-    // Use cache if fresh
-    if (cachedDiscoverNewReleases && (Date.now() - discoverCacheTimestamp < DISCOVER_CACHE_TTL)) {
-      setNewReleases(cachedDiscoverNewReleases);
-      setIsLoadingNew(false);
-      return;
-    }
-
-    setIsLoadingNew(!cachedDiscoverNewReleases);
+    setIsLoadingNew(true);
     try {
-      const result = await jiosaavnApi.getNewReleases(1, 40);
-      const songs = deduplicateSongs((result.songs || []).filter(s => s.hasLyrics === true)) as JioSaavnTrack[];
+      // Random page 1-3 for fresh songs every visit
+      const page = Math.floor(Math.random() * 3) + 1;
+      const result = await jiosaavnApi.getNewReleases(page, 40);
+      // Filter: must have lyrics AND be original (no mashups/remixes)
+      const songs = deduplicateSongs(
+        (result.songs || []).filter(s => s.hasLyrics === true && isOriginalSong(s.title))
+      ) as JioSaavnTrack[];
       setNewReleases(songs);
-      setNewReleasesPage(1);
-
-      // Update cache
-      cachedDiscoverNewReleases = songs;
+      setNewReleasesPage(page);
     } catch (error) {
       console.error("Failed to load new releases:", error);
     } finally {
@@ -248,22 +241,15 @@ export default function Discover() {
   const loadMoodSongs = async (mood: string) => {
     setSelectedMood(mood);
     setMoodPage(1);
-
-    // Use mood cache if available
-    if (cachedMoodSongsMap[mood]) {
-      setMoodSongs(cachedMoodSongsMap[mood]);
-      setIsLoadingMood(false);
-      return;
-    }
-
     setIsLoadingMood(true);
     try {
-      const result = await jiosaavnApi.getSongsByMood(mood, 1, 40);
-      const songs = deduplicateSongs(result.songs || []) as JioSaavnTrack[];
+      const page = Math.floor(Math.random() * 3) + 1;
+      const result = await jiosaavnApi.getSongsByMood(mood, page, 40);
+      // Filter out mashups/remixes from mood results too
+      const songs = deduplicateSongs(
+        (result.songs || []).filter(s => isOriginalSong(s.title))
+      ) as JioSaavnTrack[];
       setMoodSongs(songs);
-
-      // Cache per mood
-      cachedMoodSongsMap[mood] = songs;
     } catch (error) {
       console.error("Failed to load mood songs:", error);
     } finally {

@@ -215,6 +215,46 @@ export const favoritesApi = {
     }),
 };
 
+// ============ ALBUM FAVORITES API ============
+
+export const albumFavoritesApi = {
+  getAll: (userId: string, limit = 100) =>
+    callMongoFunction<{ favorites: { songId: string; createdAt: string; metadata?: any }[] }>(
+      DATA_FUNCTION,
+      { action: "get_favorites", collection: "album_favorites", userId, limit }
+    ),
+
+  add: (userId: string, albumId: string, metadata: {
+    title: string;
+    artist: string;
+    coverUrl: string;
+    songCount: number;
+  }) =>
+    callMongoFunction<{ success: boolean }>(DATA_FUNCTION, {
+      action: "add_external_favorite", // reuse the external favorite logic to save metadata!
+      collection: "album_favorites",
+      userId,
+      songId: albumId, // Edge function uses 'songId' as the primary key field for favorites
+      data: { isExternal: true, metadata },
+    }),
+
+  remove: (userId: string, albumId: string) =>
+    callMongoFunction<{ success: boolean }>(DATA_FUNCTION, {
+      action: "remove_favorite",
+      collection: "album_favorites",
+      userId,
+      songId: albumId,
+    }),
+
+  check: (userId: string, albumId: string) =>
+    callMongoFunction<{ isFavorite: boolean }>(DATA_FUNCTION, {
+      action: "check_favorite",
+      collection: "album_favorites",
+      userId,
+      songId: albumId,
+    }),
+};
+
 // ============ RECENTLY PLAYED API ============
 
 export interface RecentlyPlayedMetadata {

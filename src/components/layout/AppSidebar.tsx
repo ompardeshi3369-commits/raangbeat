@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Home, Library, Users, User, LogOut, Search, Music2, Heart, Clock, ChevronLeft, ChevronRight, Wand2, Upload, Shield, Globe } from "lucide-react";
+import { Home, Library, Users, User, LogOut, Search, Music2, Heart, Clock, ChevronLeft, ChevronRight, Wand2, Upload, Shield, Globe, Youtube, Film } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,8 @@ export function AppSidebar({ onCollapsedChange }: AppSidebarProps) {
   const mainNavLinks = [
     { to: "/home", label: "Home", icon: Home },
     { to: "/discover", label: "Discover", icon: Globe },
+    { to: "/youtube", label: "Music Videos", icon: Youtube },
+    { to: "/movies", label: "Movies & TV", icon: Film },
     { to: "/library", label: "Library", icon: Library },
     { to: "/artists", label: "Artists", icon: Users },
     ...(isAdmin ? [{ to: "/admin", label: "Admin", icon: Shield }] : []),

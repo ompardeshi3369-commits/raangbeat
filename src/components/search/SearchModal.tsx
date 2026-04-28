@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Play, User, Music, X, Globe, Loader2, Heart, ListPlus } from "lucide-react";
+import { Search, Play, User, Music, X, Globe, Loader2, Heart, ListPlus, Disc } from "lucide-react";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [localArtists, setLocalArtists] = useState<LocalArtist[]>([]);
   const [discoverSongs, setDiscoverSongs] = useState<JioSaavnTrack[]>([]);
   const [discoverArtists, setDiscoverArtists] = useState<JioSaavnArtist[]>([]);
+  const [discoverAlbums, setDiscoverAlbums] = useState<any[]>([]);
   const [isSearchingLocal, setIsSearchingLocal] = useState(false);
   const [isSearchingDiscover, setIsSearchingDiscover] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "library" | "discover">("all");
@@ -96,6 +97,17 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       const result = await jiosaavnApi.searchAll(searchQuery);
       setDiscoverSongs(result.songs?.slice(0, 8) || []);
       setDiscoverArtists(result.artists?.slice(0, 4) || []);
+      // Extract albums from searchAll result (was already returned, just never used!)
+      setDiscoverAlbums(
+        (result.albums || []).slice(0, 6).map((a: any) => ({
+          id: `jiosaavn_album_${a.id}`,
+          title: a.title || a.name,
+          artist: a.primaryArtists || a.artist || "Various Artists",
+          coverUrl: a.image?.[a.image?.length - 1]?.url || a.image?.[1]?.url || "",
+          year: a.year,
+          songCount: a.songCount,
+        }))
+      );
     } catch (error) {
       console.error("Discover search error:", error);
     } finally {
@@ -118,6 +130,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       setLocalArtists([]);
       setDiscoverSongs([]);
       setDiscoverArtists([]);
+      setDiscoverAlbums([]);
       setActiveTab("all");
     }
   }, [isOpen]);
@@ -134,7 +147,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
   const isSearching = isSearchingLocal || isSearchingDiscover;
   const hasLocalResults = localSongs.length > 0 || localArtists.length > 0;
-  const hasDiscoverResults = discoverSongs.length > 0 || discoverArtists.length > 0;
+  const hasDiscoverResults = discoverSongs.length > 0 || discoverArtists.length > 0 || discoverAlbums.length > 0;
   const hasAnyResults = hasLocalResults || hasDiscoverResults;
 
   const showLibrary = activeTab === "all" || activeTab === "library";
@@ -318,6 +331,42 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                       <Globe className="w-4 h-4 text-accent" /> Discover
                       {isSearchingDiscover && <Loader2 className="w-3 h-3 animate-spin" />}
                     </h3>
+
+                    {/* Discover Albums */}
+                    {discoverAlbums.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs text-muted-foreground mb-2 px-1 flex items-center gap-1">
+                          <Disc className="w-3 h-3" /> Albums
+                        </p>
+                        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                          {discoverAlbums.map((album) => (
+                            <Link
+                              key={album.id}
+                              to={`/album/${encodeURIComponent(album.id)}`}
+                              onClick={onClose}
+                              className="flex flex-col gap-2 p-2 rounded-xl hover:bg-muted/50 transition-colors group min-w-[100px] max-w-[100px]"
+                            >
+                              <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-accent/30 to-primary/30 overflow-hidden flex-shrink-0 relative">
+                                {album.coverUrl ? (
+                                  <img src={album.coverUrl} alt={album.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                                ) : (
+                                  <Disc className="w-8 h-8 text-muted-foreground absolute inset-0 m-auto" />
+                                )}
+                                {/* Play overlay */}
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Play className="w-6 h-6 text-white fill-white" />
+                                </div>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold truncate group-hover:text-primary transition-colors">{album.title}</p>
+                                <p className="text-xs text-muted-foreground truncate">{album.artist}</p>
+                                {album.year && <p className="text-xs text-muted-foreground/60">{album.year}</p>}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Discover Artists */}
                     {discoverArtists.length > 0 && (

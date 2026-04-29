@@ -31,7 +31,12 @@ export function YouTubeVideoModal({
   const [video, setVideo] = useState<YouTubeVideo | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasApiKey] = useState(() => !!import.meta.env.VITE_YOUTUBE_API_KEY);
+  // Check any of the numbered keys (VITE_YOUTUBE_API_KEY_1/2/3...)
+  const [hasApiKey] = useState(() =>
+    !!(import.meta.env.VITE_YOUTUBE_API_KEY_1 ||
+       import.meta.env.VITE_YOUTUBE_API_KEY_2 ||
+       import.meta.env.VITE_YOUTUBE_API_KEY_3)
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -50,7 +55,9 @@ export function YouTubeVideoModal({
         if (result) {
           setVideo(result);
         } else {
-          setError("no_api_key");
+          // null = no video found (key issue or no embeddable result)
+          // Show "no_api_key" only if we genuinely have no keys configured
+          setError(hasApiKey ? "search_failed" : "no_api_key");
         }
       })
       .catch(() => setError("search_failed"))

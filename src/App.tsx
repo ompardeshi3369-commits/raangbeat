@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { MusicPlayer } from "@/components/player/MusicPlayer";
@@ -31,6 +32,44 @@ const AuthenticatedMusicPlayer = () => {
   return <MusicPlayer />;
 };
 
+const PageWrapper = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 15 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -15 }}
+    transition={{ duration: 0.35, ease: "easeOut" }}
+    className="w-full h-full min-h-screen"
+  >
+    {children}
+  </motion.div>
+);
+
+const AnimatedRoutes = () => {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<PageWrapper><Landing /></PageWrapper>} />
+        <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+        <Route path="/signup" element={<PageWrapper><Signup /></PageWrapper>} />
+        <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
+        <Route path="/reset-password" element={<PageWrapper><ResetPassword /></PageWrapper>} />
+        <Route path="/home" element={<PageWrapper><Home /></PageWrapper>} />
+        <Route path="/library" element={<PageWrapper><Library /></PageWrapper>} />
+        <Route path="/artists" element={<PageWrapper><Artists /></PageWrapper>} />
+        <Route path="/artist/:id" element={<PageWrapper><ArtistProfile /></PageWrapper>} />
+        <Route path="/album/:id" element={<PageWrapper><AlbumDetails /></PageWrapper>} />
+        <Route path="/profile" element={<PageWrapper><Profile /></PageWrapper>} />
+        <Route path="/admin" element={<PageWrapper><Admin /></PageWrapper>} />
+        <Route path="/discover" element={<PageWrapper><Discover /></PageWrapper>} />
+        <Route path="/youtube" element={<PageWrapper><YouTubePage /></PageWrapper>} />
+        <Route path="/movies" element={<PageWrapper><Movies /></PageWrapper>} />
+        <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
+      </Routes>
+    </AnimatePresence>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -39,24 +78,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/artists" element={<Artists />} />
-              <Route path="/artist/:id" element={<ArtistProfile />} />
-              <Route path="/album/:id" element={<AlbumDetails />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/discover" element={<Discover />} />
-              <Route path="/youtube" element={<YouTubePage />} />
-              <Route path="/movies" element={<Movies />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AnimatedRoutes />
             <AuthenticatedMusicPlayer />
           </BrowserRouter>
         </PlayerProvider>

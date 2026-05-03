@@ -181,6 +181,26 @@ export function FullscreenPlayer({ isOpen, onClose }: FullscreenPlayerProps) {
   const parsedLyrics = useMemo(() => lyrics ? parseLrc(lyrics) : [], [lyrics]);
   const isSyncedLyrics = useMemo(() => parsedLyrics.some(p => p.time !== -1), [parsedLyrics]);
 
+  // Album art morph transition
+  const [prevCoverUrl, setPrevCoverUrl] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const prevCoverRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!currentTrack?.coverUrl) return;
+    if (prevCoverRef.current && prevCoverRef.current !== currentTrack.coverUrl) {
+      setPrevCoverUrl(prevCoverRef.current);
+      setIsTransitioning(true);
+      const t = setTimeout(() => {
+        setIsTransitioning(false);
+        setPrevCoverUrl(null);
+      }, 500);
+      prevCoverRef.current = currentTrack.coverUrl;
+      return () => clearTimeout(t);
+    }
+    prevCoverRef.current = currentTrack.coverUrl;
+  }, [currentTrack?.coverUrl]);
+
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
@@ -402,13 +422,38 @@ export function FullscreenPlayer({ isOpen, onClose }: FullscreenPlayerProps) {
 
       {/* Blurred album art overlay */}
       <div className="absolute inset-0 overflow-hidden">
+        {/* Old cover fades out */}
+        {isTransitioning && prevCoverUrl && (
+          <img
+            src={prevCoverUrl}
+            alt=""
+            className={cn(
+              "absolute inset-0 w-full h-full object-cover scale-[2.2] transition-opacity duration-1000",
+              showContent ? "opacity-15" : "opacity-0"
+            )}
+            style={{
+              filter: "blur(90px)",
+              opacity: 0,
+              transition: "opacity 0.6s ease-out",
+              zIndex: 1,
+            }}
+          />
+        )}
+        {/* New cover fades in */}
         <img
           src={currentTrack.coverUrl}
           alt=""
           className={cn(
-            "w-full h-full object-cover blur-[80px] scale-[2] transition-opacity duration-1000",
+            "w-full h-full object-cover scale-[2] transition-opacity duration-1000",
             showContent ? "opacity-15" : "opacity-0"
           )}
+          style={{
+            opacity: isTransitioning ? 0 : (showContent ? 0.15 : 0),
+            filter: isTransitioning ? "blur(100px)" : "blur(80px)",
+            transition: "opacity 0.6s ease-in, filter 0.6s ease-in",
+            position: "relative",
+            zIndex: 2,
+          }}
         />
       </div>
 
@@ -492,10 +537,32 @@ export function FullscreenPlayer({ isOpen, onClose }: FullscreenPlayerProps) {
                 animation: isPlaying ? "vinylSpin 12s linear infinite" : "none",
               }}
             >
+              {/* Old cover fades out with blur */}
+              {isTransitioning && prevCoverUrl && (
+                <img
+                  src={prevCoverUrl}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{
+                    opacity: 0,
+                    filter: "blur(8px) scale(1.1)",
+                    transition: "opacity 0.5s ease-out, filter 0.5s ease-out",
+                    zIndex: 1,
+                  }}
+                />
+              )}
+              {/* New cover fades in clean */}
               <img
                 src={currentTrack.coverUrl}
                 alt={currentTrack.title}
                 className="w-full h-full object-cover"
+                style={{
+                  opacity: isTransitioning ? 0 : 1,
+                  filter: isTransitioning ? "blur(6px)" : "blur(0px)",
+                  transition: "opacity 0.5s ease-in, filter 0.5s ease-in",
+                  position: "relative",
+                  zIndex: 2,
+                }}
               />
               {/* Vinyl center hole */}
               <div className="absolute inset-0 flex items-center justify-center">

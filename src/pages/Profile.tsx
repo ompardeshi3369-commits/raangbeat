@@ -8,7 +8,7 @@ import { AnimatedInput } from "@/components/ui/AnimatedInput";
 import { profilesApi, playlistsApi, favoritesApi, songsApi, siteSettingsApi, followsApi, artistsApi, AboutUsSettings, MongoPlaylist } from "@/lib/mongodb";
 import { jiosaavnApi } from "@/lib/jiosaavn";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, Save, Heart, Music, Edit2, Share2, Library, ListMusic, History, Camera, X, Play, Sparkles, Music2, Disc3, Mail, Phone, Instagram, Users } from "lucide-react";
+import { Loader2, User, Save, Heart, Music, Edit2, Share2, Library, ListMusic, History, Camera, X, Play, Sparkles, Music2, Mail, Phone, Instagram, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlayer, Track } from "@/contexts/PlayerContext";
@@ -38,7 +38,7 @@ const quickLinks = [
 ];
 
 export default function Profile() {
-  const { user, isLoading: authLoading, signOut } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const { playTrack } = usePlayer();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -305,12 +305,39 @@ export default function Profile() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="relative">
-          <Disc3 className="w-16 h-16 text-primary animate-spin" />
-          <div className="absolute inset-0 blur-xl bg-primary/30 animate-pulse" />
+      <MainLayout>
+        <div className="min-h-screen pb-32 max-w-6xl mx-auto px-4 py-8 animate-in fade-in duration-500">
+          {/* Header Skeleton */}
+          <GlassCard className="p-8 md:p-10 mb-8 border-primary/10">
+            <div className="flex flex-col lg:flex-row gap-8 items-center lg:items-start">
+              <div className="w-36 h-36 md:w-44 md:h-44 rounded-full bg-muted animate-pulse" />
+              <div className="flex-1 space-y-4 w-full">
+                <div className="h-10 w-64 bg-muted rounded-lg animate-pulse mx-auto lg:mx-0" />
+                <div className="h-4 w-32 bg-muted rounded-md animate-pulse mx-auto lg:mx-0" />
+                <div className="flex gap-4 justify-center lg:justify-start">
+                  <div className="h-8 w-24 bg-muted rounded-full animate-pulse" />
+                  <div className="h-8 w-24 bg-muted rounded-full animate-pulse" />
+                  <div className="h-8 w-24 bg-muted rounded-full animate-pulse" />
+                </div>
+                <div className="h-20 w-full max-w-md bg-muted rounded-xl animate-pulse mx-auto lg:mx-0" />
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Quick Links Skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 rounded-2xl bg-muted animate-pulse" />
+            ))}
+          </div>
+
+          {/* Content Grid Skeleton */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <GlassCard className="p-6 h-64 bg-muted/20 animate-pulse" />
+            <GlassCard className="p-6 h-64 bg-muted/20 animate-pulse" />
+          </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
